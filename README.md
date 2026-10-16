@@ -2,15 +2,33 @@
 
 **Where is that data in ConfigMgr?** v_Where is a searchable reference for Microsoft Configuration Manager (MECM/SCCM) SQL views. Type a word or phrase (e.g. `bitlocker`, `last logon`, `install date`) and see which views and columns hold it, so writing SSRS reports and SQL queries starts with an answer instead of a guess.
 
-> **Status:** work in progress. Lab is built; the app is next.
+> **Status:** work in progress. Lab is built; search page v1 works against the lab export.
 
 ## How it works
 
 - **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) and writes it to JSON. Windows authentication, read-only, never reads rows.
 - **Data** ([`data/schema.json`](data/schema.json)): the export from the lab site.
-- **Front end** (planned): one static HTML/JS page that searches that JSON. No server, no database, no install. Open it from a file share or any web server.
+- **Search page** ([`web/index.html`](web/index.html)): one static HTML/JS file that searches that JSON. No server-side code, no database, no install.
 
-Run the extractor against your own site to include your custom hardware inventory classes:
+### Try it
+
+From the repo root, serve the folder with any static web server and open `/web/`:
+
+```sh
+python3 -m http.server 8000
+# then browse to http://localhost:8000/web/
+```
+
+Opening `web/index.html` straight from disk also works: browsers block it from loading the JSON on their own, so the page asks you to pick or drop a `schema.json`. To point it at a different export, add `?data=<url>`.
+
+- Type words or a phrase (`last logon`, `install date`); results rank views whose names or columns match at word boundaries highest.
+- Category chips filter by area (Discovery, Hardware inventory, Software updates...).
+- Each view links to its `fn_rbac_` twin for RBAC-filtered SSRS reports, and **Copy SELECT** builds a query from the columns you matched.
+- The URL updates as you search, so a link takes someone straight to the same result.
+
+### Use your own site's schema
+
+Run the extractor against your site to include your custom hardware inventory classes:
 
 ```powershell
 .\Export-VWhereSchema.ps1 -SqlServer <sql-server> -Database CM_<sitecode> -OutFile .\schema.json

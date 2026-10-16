@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v_Where</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #e3e6ec;
+    --accent: #2f6fde; --accent-soft: #e6eefc; --hit: #fff1b8; --hit-text: #3d3200;
+    --badge-view: #e7f4ea; --badge-view-text: #1f6b35; --badge-fn: #f3e9fb; --badge-fn-text: #6b2a99;
+    --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1a1e26; --text: #e4e7ee; --muted: #9aa3b5; --line: #2a303c;
+      --accent: #6b9cff; --accent-soft: #22304d; --hit: #5a4a10; --hit-text: #ffe9a3;
+      --badge-view: #173323; --badge-view-text: #8fe0a8; --badge-fn: #2e1f3d; --badge-fn-text: #d6b3f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans); display: flex; flex-direction: column; }
+  header { padding: 14px 20px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .brand h1 { margin: 0; font: 700 22px/1 var(--mono); letter-spacing: -0.5px; }
+  .brand h1 span { color: var(--accent); }
+  .brand p { margin: 0; color: var(--muted); }
+  .stats { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .searchrow { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+  #q { flex: 1 1 320px; font: 16px var(--sans); padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); outline: none; }
+  #q:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  label.toggle { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip .n { opacity: 0.75; margin-left: 4px; }
+  main { flex: 1; display: grid; grid-template-columns: minmax(280px, 38%) 1fr; min-height: 0; }
+  #results { overflow: auto; border-right: 1px solid var(--line); }
+  #results .meta { padding: 8px 16px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); }
+  .item { padding: 9px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .item:hover { background: var(--accent-soft); }
+  .item[aria-selected="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .item .name { font-family: var(--mono); font-size: 13px; word-break: break-all; }
+  .item .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .item .cols { font-family: var(--mono); font-size: 12px; margin-top: 3px; color: var(--muted); word-break: break-all; }
+  mark { background: var(--hit); color: var(--hit-text); border-radius: 2px; padding: 0 1px; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; font-family: var(--sans); }
+  .badge.view { background: var(--badge-view); color: var(--badge-view-text); }
+  .badge.function { background: var(--badge-fn); color: var(--badge-fn-text); }
+  #detail { overflow: auto; padding: 18px 22px 40px; }
+  #detail h2 { margin: 0 0 4px; font: 600 18px var(--mono); word-break: break-all; }
+  #detail .desc { color: var(--muted); margin-bottom: 12px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 16px; }
+  button { font: 13px var(--sans); border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  a.link { color: var(--accent); text-decoration: none; font-family: var(--mono); cursor: pointer; }
+  a.link:hover { text-decoration: underline; }
+  section { margin-top: 18px; }
+  section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 0 0 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.mono { font-family: var(--mono); }
+  tr.hit td { background: var(--accent-soft); }
+  .joins details { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; background: var(--panel); }
+  .joins summary { padding: 6px 10px; cursor: pointer; }
+  .joins .list { padding: 4px 10px 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .empty { color: var(--muted); padding: 40px 22px; }
+  .empty kbd, .hint kbd { font-family: var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 12px; }
+  #drop { margin: 40px auto; max-width: 520px; border: 2px dashed var(--line); border-radius: 12px; padding: 30px; text-align: center; color: var(--muted); }
+  footer { padding: 6px 20px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); background: var(--panel); }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 45% 55%; }
+    #results { border-right: 0; border-bottom: 1px solid var(--line); }
+    .stats { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>v<span>_</span>Where</h1>
+    <p>Where is that data in ConfigMgr?</p>
+    <div class="stats" id="stats">Loading schema…</div>
+  </div>
+  <div class="searchrow">
+    <input id="q" type="search" placeholder="Search views and columns: bitlocker, last logon, install date…" autocomplete="off" spellcheck="false" aria-label="Search">
+    <label class="toggle"><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
+  </div>
+  <div class="chips" id="chips" role="toolbar" aria-label="Categories"></div>
+</header>
+<main>
+  <div id="results" role="listbox" aria-label="Results"></div>
+  <div id="detail"></div>
+</main>
+<footer id="footer">Schema-only reference: view and column names and types. No ConfigMgr data.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Categories: first matching rule wins ----------
+  const CATEGORIES = [
+    ['Discovery',               /^v_(R|RA)_/i],
+    ['Hardware inventory',      /^v_GS_/i],
+    ['Inventory history',       /^v_HS_/i],
+    ['Software updates',        /update/i],
+    ['Collections',             /^v_(Collection|FullCollection|ClientCollection|CollectionRule)/i],
+    ['Apps & deployments',      /^v_(Advertisement|ClientAdvertisement|Package|Program|Deployment|Application|App|CIAssignment|Content|DeploymentType)/i],
+    ['OS deployment',           /^v_(TaskSequence|TaskExecution|BootImage|OSImage|ImagePackage|Driver|OSD|TS)/i],
+    ['Compliance settings',     /^v_(CI|ConfigurationItem|Baseline|LocalizedCI)/i],
+    ['Software inventory',      /^v_(Software|MeteredSoftware|MonthlyUsage|Add_Remove|SMS_Software|Product)/i],
+    ['Client health & status',  /^v_(CH_|ClientHealth|ClientOperation|StateMessage|StatusMessage|Status|ClientDeploymentState|Client)/i],
+    ['Site & infrastructure',   /^v_(Site|Boundary|DistributionPoint|SystemResourceList|SC_|Component|DP|Server)/i],
+    ['Security & RBAC',         /^v_(Secured|Admin|Role|Scope|Security|RBAC)/i],
+    ['Endpoint protection',     /^v_(EP|AM_|Malware|Threat|Defender)/i],
+  ];
+  const OTHER = 'Other';
+  // Columns that are too generic to be useful join hints
+  const JOIN_STOP = new Set(['ID', 'GroupID', 'RevisionID', 'AgentID', 'RecordID', 'RowID', 'LocaleID', 'InstanceID', 'SiteID']);
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const els = { q: $('#q'), showFn: $('#showFn'), chips: $('#chips'), results: $('#results'), detail: $('#detail'), stats: $('#stats'), footer: $('#footer'), toast: $('#toast') };
+
+  let DB = null;            // { header, objects[], byName{}, colIndex{} }
+  let state = { q: '', cat: '', fn: false, obj: '' };
+  let current = [];         // current result list
+  let sel = -1;
+
+  // ---------- Data loading ----------
+  const params = new URLSearchParams(location.search);
+  const DATA_URL = params.get('data') || '../data/schema.json';
+
+  fetch(DATA_URL).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(init)
+    .catch(() => showDropZone());
+
+  function showDropZone() {
+    els.stats.textContent = 'No schema loaded';
+    els.results.innerHTML = '';
+    els.detail.innerHTML = `<div id="drop"><p><strong>Couldn't load <code>${esc(DATA_URL)}</code>.</strong></p>
+      <p>Opened straight from disk? Browsers block that. Pick or drop your <code>schema.json</code> instead.</p>
+      <p><input type="file" id="file" accept=".json,application/json"></p></div>`;
+    const read = (f) => f && f.text().then(t => init(JSON.parse(t))).catch(e => toast('Not a valid schema.json'));
+    $('#file').addEventListener('change', e => read(e.target.files[0]));
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => { e.preventDefault(); read(e.dataTransfer.files[0]); });
+  }
+
+  function categoryOf(name) {
+    const n = name.startsWith('fn_rbac_') ? 'v_' + name.slice(8) : name;
+    for (const [label, re] of CATEGORIES) if (re.test(n)) return label;
+    return OTHER;
+  }
+
+  // "Last_Logon_Timestamp0" -> " last logon timestamp0", "ADLastLogonTime" -> " ad last logon time"
+  // Lets search tell a word-start match ("date" in InstallDate0) from a mid-word one ("date" in Update).
+  const spaced = (s) => ' ' + s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();
+  // Categories people usually report from get a small ranking nudge
+  const CAT_WEIGHT = { 'Discovery': 12, 'Hardware inventory': 10, 'Software inventory': 8, 'Collections': 6, 'Software updates': 4, 'Apps & deployments': 4 };
+
+  function init(data) {
+    const objects = data.objects.map(o => ({
+      name: o.name,
+      kind: o.kind,
+      lname: o.name.toLowerCase(),
+      sname: spaced(o.name),
+      columns: o.columns.map(c => ({ name: c[0], type: c[1], nullable: c[2], l: c[0].toLowerCase(), s: spaced(c[0]), n: c[0].toLowerCase().replace(/_/g, '') })),
+      params: o.params || [],
+      baseView: o.baseView || null,
+      rbacFn: null,
+      cat: categoryOf(o.name),
+    }));
+    const byName = {};
+    objects.forEach(o => byName[o.name] = o);
+    objects.forEach(o => { if (o.baseView && byName[o.baseView]) byName[o.baseView].rbacFn = o.name; });
+
+    // Column -> views that contain it (views only), for join hints
+    const colIndex = {};
+    objects.filter(o => o.kind === 'view').forEach(o => o.columns.forEach(c => (colIndex[c.name] ||= []).push(o.name)));
+
+    DB = { header: data, objects, byName, colIndex };
+    const c = data.counts || {};
+    els.stats.textContent = `${(c.views ?? 0).toLocaleString()} views · ${(c.functions ?? 0).toLocaleString()} fn_rbac_ · ${(c.columns ?? 0).toLocaleString()} columns`;
+    els.footer.textContent = `Schema-only reference: names and types, no ConfigMgr data. Exported ${data.generatedUtc || '?'} from SQL Server ${data.sqlVersion || '?'}.`;
+
+    readHash();
+    els.q.value = state.q;
+    els.showFn.checked = state.fn;
+    renderChips();
+    search();
+    if (state.obj && byName[state.obj]) showDetail(state.obj);
+    else renderEmptyDetail();
+    els.q.focus();
+  }
+
+  // ---------- URL state (shareable links) ----------
+  function readHash() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    state = { q: h.get('q') || '', cat: h.get('cat') || '', fn: h.get('fn') === '1', obj: h.get('obj') || '' };
+  }
+  function writeHash() {
+    const h = new URLSearchParams();
+    if (state.q) h.set('q', state.q);
+    if (state.cat) h.set('cat', state.cat);
+    if (state.fn) h.set('fn', '1');
+    if (state.obj) h.set('obj', state.obj);
+    history.replaceState(null, '', '#' + h.toString());
+  }
+
+  // ---------- Search ----------
+  function scoreObject(o, terms, joined) {
+    let score = 0;
+    const hitCols = new Set();
+    let nameTermsWS = 0;
+    // 1) Every term must appear somewhere: in the object name or in at least one column
+    for (const t of terms) {
+      const nameWS = o.sname.includes(' ' + t);
+      let any = nameWS || o.lname.includes(t);
+      for (const c of o.columns) if (c.l.includes(t)) { hitCols.add(c.name); any = true; }
+      if (!any) return null;
+      if (nameWS) nameTermsWS++;
+      else if (o.lname.includes(t)) score += 4;         // mid-word name hit: weak
+    }
+    // 2) Name quality: all terms as words in the name beats a partial hit
+    if (nameTermsWS === terms.length) score += 80 + (terms.length > 1 && o.sname.includes(' ' + terms.join(' ')) ? 40 : 0);
+    else score += nameTermsWS * 15;
+    // 3) Best single column: does one column contain the whole idea?
+    let bestCol = 0;
+    for (const c of o.columns) {
+      const joinedHit = joined.length > 2 && c.n.includes(joined);
+      if (!hitCols.has(c.name) && !joinedHit) continue;
+      let q = terms.every(t => c.s.includes(' ' + t)) ? 40 : terms.every(t => c.l.includes(t)) ? 15 : 4;
+      if (terms.length > 1 && c.s.includes(' ' + terms.join(' '))) q += 25;   // phrase, in order
+      if (joined.length > 2) {
+        if (c.n === joined || c.n === joined + '0') q += 60;                  // "installdate" == InstallDate0
+        else if (c.n.startsWith(joined)) q += 30;                              // LastLogonTimestamp0
+        else if (joinedHit) q += 10;
+        if (joinedHit) hitCols.add(c.name);
+      }
+      if (q > bestCol) bestCol = q;
+    }
+    score += bestCol + Math.min(hitCols.size, 4) * 2;
+    if (joined.length > 2 && (o.lname === joined || o.lname === 'v_' + joined)) score += 1000;
+    score += CAT_WEIGHT[o.cat] || 0;
+    if (o.kind === 'function') score -= 5;
+    score -= o.name.length * 0.05;                      // gentle preference for shorter names
+    return { o, score, hitCols };
+  }
+
+  function search() {
+    if (!DB) return;
+    const raw = state.q.trim().toLowerCase();
+    const terms = raw.split(/\s+/).filter(Boolean);
+    const joined = terms.join('');
+    let pool = DB.objects.filter(o => (state.fn || o.kind === 'view'));
+    if (state.cat) pool = pool.filter(o => o.cat === state.cat);
+
+    let res;
+    if (!terms.length) {
+      res = pool.map(o => ({ o, score: 0, hitCols: new Set() })).sort((a, b) => a.o.name.localeCompare(b.o.name));
+    } else {
+      res = [];
+      for (const o of pool) { const r = scoreObject(o, terms, joined); if (r) res.push(r); }
+      res.sort((a, b) => b.score - a.score || a.o.name.localeCompare(b.o.name));
+    }
+    current = res;
+    sel = res.findIndex(r => r.o.name === state.obj);
+    renderResults(terms);
+    renderChipCounts(terms, joined);
+  }
+
+  function highlight(text, terms) {
+    if (!terms.length) return esc(text);
+    const re = new RegExp('(' + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'ig');
+    return esc(text).replace(re, '<mark>$1</mark>');
+  }
+
+  function renderResults(terms) {
+    const LIMIT = 300;
+    const shown = current.slice(0, LIMIT);
+    const total = current.length;
+    let html = `<div class="meta">${total.toLocaleString()} result${total === 1 ? '' : 's'}${total > LIMIT ? ` · showing first ${LIMIT}` : ''}${state.cat ? ` · ${esc(state.cat)}` : ''}</div>`;
+    html += shown.map((r, i) => {
+      const o = r.o;
+      const cols = [...r.hitCols].slice(0, 6);
+      const more = r.hitCols.size - cols.length;
+      return `<div class="item" role="option" data-i="${i}" aria-selected="${o.name === state.obj}">
+        <div class="name">${highlight(o.name, terms)}<span class="badge ${o.kind}">${o.kind === 'view' ? 'view' : 'fn'}</span></div>
+        <div class="sub">${esc(o.cat)} · ${o.columns.length} columns${o.rbacFn ? ' · has fn_rbac_' : ''}</div>
+        ${cols.length ? `<div class="cols">${cols.map(c => highlight(c, terms)).join(', ')}${more > 0 ? ` +${more}` : ''}</div>` : ''}
+      </div>`;
+    }).join('');
+    if (!total) html += `<div class="empty">No matches. Try fewer words, or turn on <code>fn_rbac_</code> functions or clear the category filter.</div>`;
+    els.results.innerHTML = html;
+  }
+
+  // ---------- Category chips ----------
+  function renderChips() {
+    const labels = [...CATEGORIES.map(c => c[0]), OTHER];
+    els.chips.innerHTML = [`<button class="chip" data-cat="" aria-pressed="${!state.cat}">All<span class="n" data-n=""></span></button>`]
+      .concat(labels.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`)).join('');
+  }
+  function renderChipCounts(terms, joined) {
+    // Counts reflect the current query, across all categories
+    const counts = {};
+    let all = 0;
+    for (const o of DB.objects) {
+      if (!state.fn && o.kind !== 'view') continue;
+      if (terms.length && !scoreObject(o, terms, joined)) continue;
+      counts[o.cat] = (counts[o.cat] || 0) + 1; all++;
+    }
+    els.chips.querySelectorAll('.n').forEach(n => {
+      const k = n.dataset.n;
+      const v = k ? (counts[k] || 0) : all;
+      n.textContent = v;
+      n.parentElement.style.display = (k && !v && state.cat !== k) ? 'none' : '';
+    });
+    els.chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.cat === state.cat)));
+  }
+
+  // ---------- Detail pane ----------
+  function renderEmptyDetail() {
+    els.detail.innerHTML = `<div class="empty">
+      <p>Search for a word you'd expect in a column or view name, like <code>bitlocker</code>, <code>last logon</code>, <code>install date</code>, <code>ResourceID</code>.</p>
+      <p class="hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open</p>
+      <p>Click any result to see its columns, its <code>fn_rbac_</code> twin, and which other views share its join keys.</p></div>`;
+  }
+
+  function showDetail(name) {
+    const o = DB.byName[name];
+    if (!o) return;
+    state.obj = name; writeHash();
+    els.results.querySelectorAll('.item').forEach(it => it.setAttribute('aria-selected', String(current[+it.dataset.i]?.o.name === name)));
+    const r = current.find(x => x.o.name === name);
+    const hits = r ? r.hitCols : new Set();
+    const terms = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    const paramSig = o.params.length ? '(' + o.params.map(p => p[0]).join(', ') + ')' : '';
+    let rel = '';
+    if (o.kind === 'view' && o.rbacFn) {
+      const f = DB.byName[o.rbacFn];
+      rel = `RBAC-filtered version: <a class="link" data-go="${esc(o.rbacFn)}">${esc(o.rbacFn)}</a> <span class="desc">${esc(f && f.params.length ? '(' + f.params.map(p => p[0]).join(', ') + ')' : '')}</span>`;
+    } else if (o.kind === 'function' && o.baseView) {
+      rel = `Permission-filtered wrapper around <a class="link" data-go="${esc(o.baseView)}">${esc(o.baseView)}</a>. Built-in SSRS reports query this form.`;
+    }
+
+    // Join hints
+    const joinCols = o.columns.map(c => c.name).filter(c => /ID$/.test(c) && !JOIN_STOP.has(c) && (DB.colIndex[c] || []).length >= 3);
+    const joins = joinCols.map(c => {
+      const others = (DB.colIndex[c] || []).filter(v => v !== o.name && v !== o.baseView);
+      return { c, others };
+    }).filter(j => j.others.length).sort((a, b) => b.others.length - a.others.length);
+
+    const selectCols = (hits.size ? o.columns.filter(c => hits.has(c.name)) : o.columns).map(c => c.name);
+    const from = o.kind === 'function' ? `${o.name}${paramSig || '(@UserSIDs)'}` : o.name;
+    const sql = `SELECT\n  ${selectCols.join(',\n  ')}\nFROM ${from}`;
+
+    els.detail.innerHTML = `
+      <h2>${esc(o.name)}<span class="badge ${o.kind}">${o.kind}</span></h2>
+      <div class="desc">${esc(o.cat)} · ${o.columns.length} columns${paramSig ? ' · parameters ' + esc(paramSig) : ''}</div>
+      ${rel ? `<div>${rel}</div>` : ''}
+      <div class="actions">
+        <button data-copy="name">Copy name</button>
+        <button data-copy="sql">Copy SELECT${hits.size ? ` (${hits.size} matched column${hits.size === 1 ? '' : 's'})` : ''}</button>
+      </div>
+      <section><h3>Columns</h3>
+        <table><thead><tr><th>Column</th><th>Type</th><th>Null</th></tr></thead><tbody>
+        ${o.columns.map(c => `<tr class="${hits.has(c.name) ? 'hit' : ''}"><td class="mono">${highlight(c.name, terms)}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? 'yes' : ''}</td></tr>`).join('')}
+        </tbody></table>
+      </section>
+      ${joins.length ? `<section class="joins"><h3>Join hints: views sharing a key column</h3>
+        ${joins.map(j => `<details><summary><code>${esc(j.c)}</code>: ${j.others.length} other view${j.others.length === 1 ? '' : 's'}</summary>
+          <div class="list">${j.others.sort().map(v => `<a class="link" data-go="${esc(v)}">${esc(v)}</a>`).join('')}</div></details>`).join('')}
+      </section>` : ''}`;
+
+    els.detail.querySelector('[data-copy="name"]').onclick = () => copy(o.name, 'Name copied');
+    els.detail.querySelector('[data-copy="sql"]').onclick = () => copy(sql, 'SELECT copied');
+    els.detail.scrollTop = 0;
+  }
+
+  function goTo(name) {
+    if (!DB.byName[name]) return;
+    if (DB.byName[name].kind === 'function' && !state.fn) { state.fn = true; els.showFn.checked = true; search(); }
+    if (!current.some(r => r.o.name === name)) { state.cat = ''; search(); }
+    showDetail(name);
+  }
+
+  function copy(text, msg) {
+    const done = () => toast(msg);
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+    else fallbackCopy(text, done);
+  }
+  function fallbackCopy(text, done) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed'); }
+    ta.remove();
+  }
+  let toastTimer;
+  function toast(msg) {
+    els.toast.textContent = msg; els.toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove('show'), 1400);
+  }
+
+  // ---------- Events ----------
+  let debounce;
+  els.q.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { state.q = els.q.value; writeHash(); search(); }, 120);
+  });
+  els.showFn.addEventListener('change', () => { state.fn = els.showFn.checked; writeHash(); search(); });
+  els.chips.addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    state.cat = b.dataset.cat; writeHash(); search();
+  });
+  els.results.addEventListener('click', e => {
+    const it = e.target.closest('.item'); if (!it) return;
+    sel = +it.dataset.i; showDetail(current[sel].o.name);
+  });
+  els.detail.addEventListener('click', e => {
+    const a = e.target.closest('[data-go]'); if (a) goTo(a.dataset.go);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== els.q) { e.preventDefault(); els.q.focus(); els.q.select(); return; }
+    if (!current.length || (document.activeElement !== els.q && document.activeElement !== document.body)) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      sel = Math.max(0, Math.min(Math.min(current.length, 300) - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+      showDetail(current[sel].o.name);
+      els.results.querySelector(`.item[data-i="${sel}"]`)?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && sel < 0) {
+      sel = 0; showDetail(current[0].o.name);
+    }
+  });
+  window.addEventListener('hashchange', () => {
+    if (!DB) return;
+    const before = JSON.stringify(state); readHash();
+    if (JSON.stringify(state) === before) return;
+    els.q.value = state.q; els.showFn.checked = state.fn; search();
+    if (state.obj) showDetail(state.obj);
+  });
+})();
+</script>
+</body>
+</html>
