@@ -4,11 +4,17 @@
 
 > **Status:** work in progress. Lab is built; the app is next.
 
-## How it works (planned)
+## How it works
 
-- **Front end:** one static HTML/JS page. No server, no database, no install. Open it from a file share or any web server.
-- **Data:** a JSON file describing ConfigMgr views and their columns.
-- **Builder:** a Python script that reads a ConfigMgr site database and generates that JSON.
+- **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) and writes it to JSON. Windows authentication, read-only, never reads rows.
+- **Data** ([`data/schema.json`](data/schema.json)): the export from the lab site.
+- **Front end** (planned): one static HTML/JS page that searches that JSON. No server, no database, no install. Open it from a file share or any web server.
+
+Run the extractor against your own site to include your custom hardware inventory classes:
+
+```powershell
+.\Export-VWhereSchema.ps1 -SqlServer <sql-server> -Database CM_<sitecode> -OutFile .\schema.json
+```
 
 ## Data policy
 
