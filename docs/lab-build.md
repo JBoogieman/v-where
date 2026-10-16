@@ -65,6 +65,7 @@ These cost real time. Writing them down so they don't again.
 | ConfigMgr eval `.exe` won't open as a zip | It's a **7-Zip SFX**, not a zip | `ConfigMgr_2509.exe -oC:\CMSource -y` |
 | Setup "completes" but the site never starts: `sitecomp.log` loops *Unknown SQL Error / Failed to connect to the SQL Server, connection type: SMS ACCESS*; Application log Event 4786 (COMPlus) | **ODBC Driver 18.7.1.1** crashes ConfigMgr's site services (known issue with ConfigMgr's app-local VC++ runtime) | Uninstall 18.7.1.1, install **18.6.2.1**, reboot. Pin that version until Microsoft says otherwise |
 | Setup ran as SYSTEM | Only the account that installs ConfigMgr gets Full Administrator | Add a real admin account afterwards (see below) |
+| First schema export was missing ~240 views (no BitLocker, no TPM) | The site keeps creating hardware inventory views for ~45 minutes after setup reports success | Wait until new views stop appearing (`SELECT MAX(create_date) FROM sys.views`), then export |
 
 ## After install
 
