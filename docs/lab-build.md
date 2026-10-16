@@ -63,6 +63,7 @@ These cost real time. Writing them down so they don't again.
 | Prereq error: .NET Framework 3.5 required | Not installed on Server 2025 by default; Windows Update download stalled | `dism /online /enable-feature /featurename:NetFx3 /all /source:<ServerISO>\sources\sxs /limitaccess` |
 | Setup fails: "could not install SQL RMO" (`msoledbsql.msi` 1603) | OLE DB Driver 19 needs the **Visual C++ 2015-2022 redistributable** (14.34+) | Install `vc_redist.x64.exe` (and x86), then rerun setup |
 | ConfigMgr eval `.exe` won't open as a zip | It's a **7-Zip SFX**, not a zip | `ConfigMgr_2509.exe -oC:\CMSource -y` |
+| Setup "completes" but the site never starts: `sitecomp.log` loops *Unknown SQL Error / Failed to connect to the SQL Server, connection type: SMS ACCESS*; Application log Event 4786 (COMPlus) | **ODBC Driver 18.7.1.1** crashes ConfigMgr's site services (known issue with ConfigMgr's app-local VC++ runtime) | Uninstall 18.7.1.1, install **18.6.2.1**, reboot. Pin that version until Microsoft says otherwise |
 | Setup ran as SYSTEM | Only the account that installs ConfigMgr gets Full Administrator | Add a real admin account afterwards (see below) |
 
 ## After install

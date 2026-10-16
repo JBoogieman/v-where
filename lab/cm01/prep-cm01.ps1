@@ -37,7 +37,7 @@ $dl = @{
   'adksetup.exe'       = 'https://go.microsoft.com/fwlink/?linkid=2289980'   # Windows ADK 10.1.26100
   'adkwinpesetup.exe'  = 'https://go.microsoft.com/fwlink/?linkid=2289981'   # WinPE add-on
   'ConfigMgr_2509.exe' = 'https://go.microsoft.com/fwlink/?linkid=2350307'   # ConfigMgr 2509 eval
-  'msodbcsql.msi'      = 'https://go.microsoft.com/fwlink/?linkid=2378279'   # ODBC Driver 18
+  'msodbcsql.msi'      = 'https://go.microsoft.com/fwlink/?linkid=2358430'   # ODBC Driver 18.6.2.1 (NOT 18.7.1.1: crashes ConfigMgr, see gotchas)
   'vc_redist.x64.exe'  = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
   'vc_redist.x86.exe'  = 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
 }
