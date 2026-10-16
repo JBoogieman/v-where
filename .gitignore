@@ -1,0 +1,29 @@
+# --- Secrets / local config: never commit ---
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.*
+config.local.*
+
+# --- Raw database extracts: generated JSON only, never raw dumps ---
+/data/raw/
+*.bak
+*.mdf
+*.ldf
+*.local.csv
+*.local.json
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
