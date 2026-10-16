@@ -2,11 +2,11 @@
 
 **Where is that data in ConfigMgr?** v_Where is a searchable reference for Microsoft Configuration Manager (MECM/SCCM) SQL views. Type a word or phrase (e.g. `bitlocker`, `last logon`, `install date`) and see which views and columns hold it, so writing SSRS reports and SQL queries starts with an answer instead of a guess.
 
-> **Status:** work in progress. Lab is built; search page v1 works against the lab export.
+> **Status:** work in progress. Lab is built; the search page works against the lab export (841 views, 625 `fn_rbac_` functions).
 
 ## How it works
 
-- **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) and writes it to JSON. Windows authentication, read-only, never reads rows.
+- **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) plus its hardware inventory class definitions, and writes them to JSON. Windows authentication, read-only, never reads device or user data. `-SchemaOnly` skips the class definitions.
 - **Data** ([`data/schema.json`](data/schema.json)): the export from the lab site.
 - **Search page** ([`web/index.html`](web/index.html)): one static HTML/JS file that searches that JSON. No server-side code, no database, no install.
 
@@ -22,6 +22,8 @@ python3 -m http.server 8000
 Opening `web/index.html` straight from disk also works: browsers block it from loading the JSON on their own, so the page asks you to pick or drop a `schema.json`. To point it at a different export, add `?data=<url>`.
 
 - Type words or a phrase (`last logon`, `install date`); results rank views whose names or columns match at word boundaries highest.
+- Everyday words are translated into ConfigMgr's names: `ram` → physical memory, `uptime` → LastBootUpTime, `primary user` → user machine relationship, `kb` → ArticleID. The list lives in `SYNONYMS` at the top of the page's script.
+- Hardware inventory views show the WMI class behind them, and flag classes and columns that Default Client Settings doesn't collect (the view exists but stays empty until you enable them).
 - Category chips filter by area (Discovery, Hardware inventory, Software updates...).
 - Each view links to its `fn_rbac_` twin for RBAC-filtered SSRS reports, and **Copy SELECT** builds a query from the columns you matched.
 - The URL updates as you search, so a link takes someone straight to the same result.

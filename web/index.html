@@ -9,7 +9,8 @@
     --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #e3e6ec;
     --accent: #2f6fde; --accent-soft: #e6eefc; --hit: #fff1b8; --hit-text: #3d3200;
     --badge-view: #e7f4ea; --badge-view-text: #1f6b35; --badge-fn: #f3e9fb; --badge-fn-text: #6b2a99;
-    --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    --warn: #b7791f; --warn-soft: #fdf3e1; --warn-text: #6b4508;
+    --mono:ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
@@ -17,6 +18,7 @@
       --bg: #12151b; --panel: #1a1e26; --text: #e4e7ee; --muted: #9aa3b5; --line: #2a303c;
       --accent: #6b9cff; --accent-soft: #22304d; --hit: #5a4a10; --hit-text: #ffe9a3;
       --badge-view: #173323; --badge-view-text: #8fe0a8; --badge-fn: #2e1f3d; --badge-fn-text: #d6b3f5;
+      --warn: #d9a443; --warn-soft: #33280f; --warn-text: #f3d9a4;
     }
   }
   * { box-sizing: border-box; }
@@ -64,6 +66,15 @@
   th { color: var(--muted); font-weight: 600; font-size: 12px; }
   td.mono { font-family: var(--mono); }
   tr.hit td { background: var(--accent-soft); }
+  tr.off td { color: var(--muted); }
+  .tag { display: inline-block; font: 11px var(--sans); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; color: var(--muted); vertical-align: 1px; }
+  .tag.warn { border-color: var(--warn); color: var(--warn-text); background: var(--warn-soft); }
+  .note { border-left: 3px solid var(--line); background: var(--panel); padding: 8px 12px; border-radius: 4px; margin: 10px 0; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); color: var(--warn-text); }
+  .note code { font-family: var(--mono); font-size: 12px; }
+  .syn { margin-top: 8px; color: var(--muted); font-size: 12px; }
+  .syn b { color: var(--text); font-weight: 600; }
+  .item .via { color: var(--muted); font-size: 12px; font-style: italic; }
   .joins details { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; background: var(--panel); }
   .joins summary { padding: 6px 10px; cursor: pointer; }
   .joins .list { padding: 4px 10px 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
@@ -91,6 +102,7 @@
     <input id="q" type="search" placeholder="Search views and columns: bitlocker, last logon, install date…" autocomplete="off" spellcheck="false" aria-label="Search">
     <label class="toggle"><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
   </div>
+  <div class="syn" id="syn" hidden></div>
   <div class="chips" id="chips" role="toolbar" aria-label="Categories"></div>
 </header>
 <main>
@@ -124,9 +136,121 @@
   // Columns that are too generic to be useful join hints
   const JOIN_STOP = new Set(['ID', 'GroupID', 'RevisionID', 'AgentID', 'RecordID', 'RowID', 'LocaleID', 'InstanceID', 'SiteID']);
 
+  // ---------- Synonyms: what people type -> what ConfigMgr calls it ----------
+  // The typed words are always searched too; these add extra searches, ranked a little lower.
+  // Keys can be up to 3 words. Values are plain words matched like a typed query.
+  const SYNONYMS = {
+    // Hardware and OS
+    'bitlocker': ['encryptable volume', 'mbam'],
+    'encryption': ['encryptable volume', 'bitlocker'],
+    'ram': ['physical memory', 'memory'],
+    'cpu': ['processor'],
+    'cores': ['number of cores'],
+    'hard drive': ['logical disk', 'disk'],
+    'hard disk': ['logical disk', 'disk'],
+    'hdd': ['logical disk', 'disk'],
+    'ssd': ['disk', 'media type'],
+    'disk space': ['free space'],
+    'drive space': ['free space'],
+    'os': ['operating system'],
+    'windows version': ['operating system version', 'build number'],
+    'windows build': ['build number'],
+    'make': ['computer system manufacturer'],
+    'vendor': ['computer system manufacturer', 'publisher'],
+    'oem': ['computer system manufacturer'],
+    'service tag': ['bios serial number', 'enclosure serial number'],
+    'firmware': ['bios', 'uefi'],
+    'uptime': ['last boot up time'],
+    'last boot': ['last boot up time'],
+    'last reboot': ['last boot up time'],
+    'last restart': ['last boot up time'],
+    'reboot': ['restart'],
+    'laptop': ['chassis types', 'battery'],
+    'form factor': ['chassis types'],
+    'chassis': ['chassis types'],
+    'vm': ['virtual machine'],
+    'monitor': ['desktop monitor'],
+    'screen': ['desktop monitor'],
+    'hostname': ['netbios name', 'dns host name'],
+    'computer name': ['netbios name'],
+    'device name': ['netbios name'],
+    'machine name': ['netbios name'],
+    'pc name': ['netbios name'],
+    // Users
+    'username': ['user name'],
+    'logged on user': ['current logon user', 'computer system user name'],
+    'logged in user': ['current logon user', 'computer system user name'],
+    'current user': ['current logon user', 'computer system user name'],
+    'login': ['logon'],
+    'sign in': ['logon'],
+    'signin': ['logon'],
+    'primary user': ['user machine relationship', 'users primary machines', 'top console user'],
+    'main user': ['top console user', 'users primary machines'],
+    'uda': ['user machine relationship'],
+    'user device affinity': ['user machine relationship'],
+    'email': ['mail'],
+    'ad group': ['group name'],
+    'security group': ['group name'],
+    'organizational unit': ['ou name'],
+    // Software and updates
+    'programs': ['add remove programs'],
+    'installed apps': ['add remove programs', 'installed software'],
+    'installed programs': ['add remove programs', 'installed software'],
+    'arp': ['add remove programs'],
+    'patch': ['update'],
+    'patches': ['update'],
+    'patching': ['update'],
+    'hotfix': ['hot fix', 'quick fix engineering'],
+    'kb': ['article id', 'hot fix id'],
+    'wsus': ['software update', 'update'],
+    'o365': ['office365'],
+    'm365': ['office365'],
+    'activation': ['license status', 'software licensing'],
+    'kms': ['software licensing'],
+    // Client and site
+    'heartbeat': ['last ddr'],
+    'last seen': ['last active time', 'last ddr', 'last online'],
+    'last contact': ['last active time', 'last policy request'],
+    'last inventory': ['last hw scan', 'last hw'],
+    'hinv': ['hw scan', 'workstation status'],
+    'sinv': ['last software scan', 'software scan'],
+    'client health': ['ch client summary'],
+    'maintenance window': ['service window'],
+    'mw': ['service window'],
+    'dp': ['distribution point'],
+    'mp': ['management point'],
+    'ts': ['task sequence', 'task execution'],
+    'osd': ['task sequence', 'boot image'],
+    'dcm': ['configuration item', 'baseline'],
+    'antivirus': ['antimalware', 'malware'],
+    'av': ['antimalware'],
+    'defender': ['antimalware', 'malware', 'endpoint protection'],
+    'scep': ['antimalware', 'endpoint protection'],
+    'virus': ['malware', 'threat'],
+    'comanagement': ['co management'],
+    'intune': ['co management', 'mdm'],
+  };
+  // Words that describe the search rather than the data ("sccm view for last logon")
+  const STOP = new Set(['sccm', 'mecm', 'memcm', 'configmgr', 'view', 'views', 'table', 'tables', 'column', 'columns', 'sql',
+    'the', 'a', 'an', 'of', 'for', 'in', 'on', 'where', 'which', 'what', 'is', 'are', 'find', 'show', 'me', 'with', 'and']);
+  const SYNONYM_PENALTY = 12;
+  // Views most reports start from: a small ranking nudge so SerialNumber0 in v_GS_PC_BIOS
+  // beats the same column in v_GS_PHYSICAL_DISK.
+  const POPULAR = new Set(['v_R_System', 'v_R_User', 'v_GS_COMPUTER_SYSTEM', 'v_GS_PC_BIOS', 'v_GS_SYSTEM_ENCLOSURE',
+    'v_GS_OPERATING_SYSTEM', 'v_GS_PROCESSOR', 'v_GS_X86_PC_MEMORY', 'v_GS_LOGICAL_DISK', 'v_GS_DISK',
+    'v_GS_NETWORK_ADAPTER_CONFIGURATION', 'v_GS_ADD_REMOVE_PROGRAMS', 'v_GS_ADD_REMOVE_PROGRAMS_64', 'v_Add_Remove_Programs',
+    'v_GS_INSTALLED_SOFTWARE', 'v_GS_SYSTEM_CONSOLE_USAGE', 'v_GS_WORKSTATION_STATUS', 'v_GS_ENCRYPTABLE_VOLUME', 'v_GS_TPM',
+    'v_GS_QUICK_FIX_ENGINEERING', 'v_RA_System_SystemOUName', 'v_RA_System_IPAddresses', 'v_RA_System_MACAddresses',
+    'v_FullCollectionMembership', 'v_Collection', 'v_CH_ClientSummary', 'v_UpdateInfo', 'v_UpdateComplianceStatus',
+    'v_Update_ComplianceStatusAll', 'v_ClientAdvertisementStatus', 'v_Advertisement', 'v_DeploymentSummary',
+    'v_AppDeploymentSummary', 'v_TaskExecutionStatus', 'v_UsersPrimaryMachines', 'v_UserMachineRelationship',
+    'v_CombinedDeviceResources']);
+  const POPULAR_BOOST = 15;
+  const MAX_VARIANTS = 16;
+
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const els = { q: $('#q'), showFn: $('#showFn'), chips: $('#chips'), results: $('#results'), detail: $('#detail'), stats: $('#stats'), footer: $('#footer'), toast: $('#toast') };
+  const els = { q: $('#q'), showFn: $('#showFn'), syn: $('#syn'), chips: $('#chips'), results: $('#results'), detail: $('#detail'), stats: $('#stats'), footer: $('#footer'), toast: $('#toast') };
 
   let DB = null;            // { header, objects[], byName{}, colIndex{} }
   let state = { q: '', cat: '', fn: false, obj: '' };
@@ -163,23 +287,40 @@
   // Lets search tell a word-start match ("date" in InstallDate0) from a mid-word one ("date" in Update).
   const spaced = (s) => ' ' + s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();
   // Categories people usually report from get a small ranking nudge
-  const CAT_WEIGHT = { 'Discovery': 12, 'Hardware inventory': 10, 'Software inventory': 8, 'Collections': 6, 'Software updates': 4, 'Apps & deployments': 4 };
+  const CAT_WEIGHT = { 'Discovery': 12, 'Hardware inventory': 10, 'Software inventory': 8, 'Collections': 6, 'Software updates': 4, 'Apps & deployments': 4, 'Inventory history': -40 };
 
   function init(data) {
     const objects = data.objects.map(o => ({
       name: o.name,
       kind: o.kind,
       lname: o.name.toLowerCase(),
+      nname: o.name.toLowerCase().replace(/_/g, ''),
       sname: spaced(o.name),
       columns: o.columns.map(c => ({ name: c[0], type: c[1], nullable: c[2], l: c[0].toLowerCase(), s: spaced(c[0]), n: c[0].toLowerCase().replace(/_/g, '') })),
       params: o.params || [],
       baseView: o.baseView || null,
+      aliases: o.aliases || [],
+      hinv: o.hinv || null,                         // hardware inventory class behind a v_GS_/v_HS_ view
+      offColumns: new Set(o.offColumns || []),      // columns Default Client Settings doesn't collect
       rbacFn: null,
       cat: categoryOf(o.name),
     }));
     const byName = {};
     objects.forEach(o => byName[o.name] = o);
-    objects.forEach(o => { if (o.baseView && byName[o.baseView]) byName[o.baseView].rbacFn = o.name; });
+    objects.forEach(o => {
+      const base = o.baseView && byName[o.baseView];
+      if (!base) return;
+      base.rbacFn = o.name;
+      if (!o.hinv && base.hinv) { o.hinv = base.hinv; o.offColumns = base.offColumns; }   // fn_rbac_GS_X inherits from v_GS_X
+    });
+    // "Also known as" text searched like the name: synonyms, inventory display name, WMI class
+    objects.forEach(o => {
+      const aka = [...o.aliases, o.hinv && o.hinv.display, o.hinv && o.hinv.class].filter(Boolean);
+      o.laka = aka.join(' ').toLowerCase();
+      o.naka = o.laka.replace(/_/g, '');
+      o.saka = aka.map(spaced).join('');
+      o.laliases = o.aliases.map(a => a.toLowerCase());
+    });
 
     // Column -> views that contain it (views only), for join hints
     const colIndex = {};
@@ -215,74 +356,135 @@
   }
 
   // ---------- Search ----------
-  function scoreObject(o, terms, joined) {
+  // Query -> words. Hyphens split words ("co-management"); underscores stay (view names).
+  const tokenize = (q) => q.toLowerCase().replace(/-/g, ' ').split(/\s+/).filter(Boolean);
+
+  // Swap in synonyms (longest phrase first) to build alternative searches, then drop
+  // filler words outside synonym phrases. The first variant is always what was typed.
+  function expand(words) {
+    let segs = [];
+    for (let i = 0; i < words.length;) {
+      let k = Math.min(3, words.length - i);
+      for (; k > 0; k--) if (SYNONYMS[words.slice(i, i + k).join(' ')]) break;
+      if (k) { const key = words.slice(i, i + k).join(' '); segs.push([key, ...SYNONYMS[key]]); i += k; }
+      else { segs.push([words[i]]); i++; }
+    }
+    const kept = segs.filter(s => s.length > 1 || !STOP.has(s[0]));
+    if (kept.length) segs = kept;
+    let combos = [{ parts: [], via: [] }];
+    for (const opts of segs) {
+      const next = [];
+      for (const c of combos) opts.forEach((opt, j) => next.push({ parts: c.parts.concat(opt), via: j ? c.via.concat(opt) : c.via }));
+      combos = next.slice(0, MAX_VARIANTS);
+    }
+    return combos.map(c => makeQuery(c.parts.join(' ').split(' '), c.via.length ? c.via.join(' + ') : null));
+  }
+
+  // Each word also matches its singular ("updates" finds Update...).
+  // Short words (ram, ddr) only match at a word start, so "ram" doesn't hit "Programs";
+  // one- or two-letter words (av, mp, ip) must be a whole word, so "av" doesn't hit "Average".
+  function makeQuery(words, via) {
+    const terms = words.map(t => ({
+      t, short: t.length <= 3,
+      whole: t.length <= 2 ? new RegExp('(?:^| )' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:$|[ 0-9])') : null,
+      forms: (t.length > 3 && t.endsWith('s') && !t.endsWith('ss')) ? [t, t.slice(0, -1)] : [t],
+    }));
+    const joined = words.join('');
+    return { terms, joined, jn: joined.replace(/_/g, ''), via, hl: [...new Set(terms.flatMap(x => x.forms))] };
+  }
+  const wordIn = (s, term) => term.whole ? term.whole.test(s) : term.forms.some(f => s.includes(' ' + f));
+  const subIn = (s, term) => !term.short && term.forms.some(f => s.includes(f));
+
+  function scoreObject(o, Q) {
+    const { terms, joined, jn } = Q;
     let score = 0;
     const hitCols = new Set();
     let nameTermsWS = 0;
-    // 1) Every term must appear somewhere: in the object name or in at least one column
-    for (const t of terms) {
-      const nameWS = o.sname.includes(' ' + t);
-      let any = nameWS || o.lname.includes(t);
-      for (const c of o.columns) if (c.l.includes(t)) { hitCols.add(c.name); any = true; }
+    // 1) Every term must appear somewhere: in the name (or aliases/inventory class) or in at least one column
+    for (const term of terms) {
+      const nameWS = wordIn(o.sname, term) || wordIn(o.saka, term);
+      const nameSub = subIn(o.lname, term) || subIn(o.nname, term) || subIn(o.laka, term) || subIn(o.naka, term);
+      let any = nameWS || nameSub;
+      for (const c of o.columns) if (wordIn(c.s, term) || subIn(c.l, term) || subIn(c.n, term)) { hitCols.add(c.name); any = true; }
       if (!any) return null;
       if (nameWS) nameTermsWS++;
-      else if (o.lname.includes(t)) score += 4;         // mid-word name hit: weak
+      else if (nameSub) score += 4;                     // mid-word name hit: weak
     }
     // 2) Name quality: all terms as words in the name beats a partial hit
-    if (nameTermsWS === terms.length) score += 80 + (terms.length > 1 && o.sname.includes(' ' + terms.join(' ')) ? 40 : 0);
+    const phrase = ' ' + terms.map(x => x.t).join(' ');
+    if (nameTermsWS === terms.length) score += 80 + (terms.length > 1 && (o.sname.includes(phrase) || o.saka.includes(phrase)) ? 40 : 0);
     else score += nameTermsWS * 15;
     // 3) Best single column: does one column contain the whole idea?
     let bestCol = 0;
     for (const c of o.columns) {
-      const joinedHit = joined.length > 2 && c.n.includes(joined);
+      const joinedHit = jn.length > 3 && c.n.includes(jn);
       if (!hitCols.has(c.name) && !joinedHit) continue;
-      let q = terms.every(t => c.s.includes(' ' + t)) ? 40 : terms.every(t => c.l.includes(t)) ? 15 : 4;
-      if (terms.length > 1 && c.s.includes(' ' + terms.join(' '))) q += 25;   // phrase, in order
-      if (joined.length > 2) {
-        if (c.n === joined || c.n === joined + '0') q += 60;                  // "installdate" == InstallDate0
-        else if (c.n.startsWith(joined)) q += 30;                              // LastLogonTimestamp0
+      let q = terms.every(t => wordIn(c.s, t)) ? 40 : terms.every(t => wordIn(c.s, t) || subIn(c.l, t) || subIn(c.n, t)) ? 15 : 4;
+      if (terms.length > 1 && c.s.includes(phrase)) q += 25;                   // phrase, in order
+      if (jn.length > 3) {
+        if (c.n === jn || c.n === jn + '0') q += 60;                            // "installdate" == InstallDate0
+        else if (c.n.startsWith(jn)) q += 30;                                    // LastLogonTimestamp0
         else if (joinedHit) q += 10;
         if (joinedHit) hitCols.add(c.name);
       }
       if (q > bestCol) bestCol = q;
     }
     score += bestCol + Math.min(hitCols.size, 4) * 2;
-    if (joined.length > 2 && (o.lname === joined || o.lname === 'v_' + joined)) score += 1000;
+    if (joined.length > 2 && (o.lname === joined || o.lname === 'v_' + joined || o.laliases.includes(joined))) score += 1000;
     score += CAT_WEIGHT[o.cat] || 0;
+    if (POPULAR.has(o.kind === 'function' ? o.baseView : o.name)) score += POPULAR_BOOST;
     if (o.kind === 'function') score -= 5;
     score -= o.name.length * 0.05;                      // gentle preference for shorter names
-    return { o, score, hitCols };
+    return { o, score, hitCols, hl: Q.hl, via: Q.via, nameMatch: nameTermsWS === terms.length };
+  }
+
+  // Best score across the typed query and its synonym variants
+  function bestMatch(o, variants) {
+    let best = null;
+    for (const Q of variants) {
+      const r = scoreObject(o, Q);
+      if (!r) continue;
+      if (Q.via) r.score -= SYNONYM_PENALTY;
+      if (!best || r.score > best.score) best = r;
+    }
+    if (best && best.via && scoreObject(o, variants[0])) best.via = null;   // also matched as typed
+    return best;
   }
 
   function search() {
     if (!DB) return;
-    const raw = state.q.trim().toLowerCase();
-    const terms = raw.split(/\s+/).filter(Boolean);
-    const joined = terms.join('');
-    let pool = DB.objects.filter(o => (state.fn || o.kind === 'view'));
-    if (state.cat) pool = pool.filter(o => o.cat === state.cat);
+    const words = tokenize(state.q.trim());
+    const variants = words.length ? expand(words) : [];
+    const pool = DB.objects.filter(o => (state.fn || o.kind === 'view'));
 
-    let res;
-    if (!terms.length) {
-      res = pool.map(o => ({ o, score: 0, hitCols: new Set() })).sort((a, b) => a.o.name.localeCompare(b.o.name));
+    let all;
+    if (!words.length) {
+      all = pool.map(o => ({ o, score: 0, hitCols: new Set(), hl: [], via: null })).sort((a, b) => a.o.name.localeCompare(b.o.name));
     } else {
-      res = [];
-      for (const o of pool) { const r = scoreObject(o, terms, joined); if (r) res.push(r); }
-      res.sort((a, b) => b.score - a.score || a.o.name.localeCompare(b.o.name));
+      all = [];
+      for (const o of pool) { const r = bestMatch(o, variants); if (r) all.push(r); }
+      all.sort((a, b) => b.score - a.score || a.o.name.localeCompare(b.o.name));
     }
-    current = res;
-    sel = res.findIndex(r => r.o.name === state.obj);
-    renderResults(terms);
-    renderChipCounts(terms, joined);
+    current = state.cat ? all.filter(r => r.o.cat === state.cat) : all;
+    sel = current.findIndex(r => r.o.name === state.obj);
+    renderSynonyms(variants);
+    renderResults();
+    renderChipCounts(all);
   }
 
-  function highlight(text, terms) {
-    if (!terms.length) return esc(text);
-    const re = new RegExp('(' + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'ig');
+  function renderSynonyms(variants) {
+    const alts = [...new Set(variants.filter(v => v.via).map(v => v.terms.map(x => x.t).join(' ')))];
+    els.syn.hidden = !alts.length;
+    els.syn.innerHTML = alts.length ? `Also searching: ${alts.slice(0, 6).map(a => `<b>${esc(a)}</b>`).join(' · ')}${alts.length > 6 ? ` +${alts.length - 6}` : ''}` : '';
+  }
+
+  function highlight(text, hl) {
+    if (!hl || !hl.length) return esc(text);
+    const re = new RegExp('(' + hl.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((a, b) => b.length - a.length).join('|') + ')', 'ig');
     return esc(text).replace(re, '<mark>$1</mark>');
   }
 
-  function renderResults(terms) {
+  function renderResults() {
     const LIMIT = 300;
     const shown = current.slice(0, LIMIT);
     const total = current.length;
@@ -291,10 +493,12 @@
       const o = r.o;
       const cols = [...r.hitCols].slice(0, 6);
       const more = r.hitCols.size - cols.length;
+      const off = o.hinv && !o.hinv.collected;
       return `<div class="item" role="option" data-i="${i}" aria-selected="${o.name === state.obj}">
-        <div class="name">${highlight(o.name, terms)}<span class="badge ${o.kind}">${o.kind === 'view' ? 'view' : 'fn'}</span></div>
-        <div class="sub">${esc(o.cat)} · ${o.columns.length} columns${o.rbacFn ? ' · has fn_rbac_' : ''}</div>
-        ${cols.length ? `<div class="cols">${cols.map(c => highlight(c, terms)).join(', ')}${more > 0 ? ` +${more}` : ''}</div>` : ''}
+        <div class="name">${highlight(o.name, r.hl)}<span class="badge ${o.kind}">${o.kind === 'view' ? 'view' : 'fn'}</span>${off ? '<span class="tag warn" title="Default Client Settings does not collect this inventory class">not collected by default</span>' : ''}</div>
+        <div class="sub">${esc(o.cat)} · ${o.columns.length} columns${o.rbacFn ? ' · has fn_rbac_' : ''}${o.hinv && o.hinv.class ? ' · ' + esc(o.hinv.class) : ''}</div>
+        ${cols.length ? `<div class="cols">${cols.map(c => highlight(c, r.hl)).join(', ')}${more > 0 ? ` +${more}` : ''}</div>` : ''}
+        ${r.via ? `<div class="via">matched as “${esc(r.via)}”</div>` : ''}
       </div>`;
     }).join('');
     if (!total) html += `<div class="empty">No matches. Try fewer words, or turn on <code>fn_rbac_</code> functions or clear the category filter.</div>`;
@@ -307,15 +511,11 @@
     els.chips.innerHTML = [`<button class="chip" data-cat="" aria-pressed="${!state.cat}">All<span class="n" data-n=""></span></button>`]
       .concat(labels.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`)).join('');
   }
-  function renderChipCounts(terms, joined) {
+  function renderChipCounts(matched) {
     // Counts reflect the current query, across all categories
     const counts = {};
-    let all = 0;
-    for (const o of DB.objects) {
-      if (!state.fn && o.kind !== 'view') continue;
-      if (terms.length && !scoreObject(o, terms, joined)) continue;
-      counts[o.cat] = (counts[o.cat] || 0) + 1; all++;
-    }
+    const all = matched.length;
+    for (const r of matched) counts[r.o.cat] = (counts[r.o.cat] || 0) + 1;
     els.chips.querySelectorAll('.n').forEach(n => {
       const k = n.dataset.n;
       const v = k ? (counts[k] || 0) : all;
@@ -329,6 +529,7 @@
   function renderEmptyDetail() {
     els.detail.innerHTML = `<div class="empty">
       <p>Search for a word you'd expect in a column or view name, like <code>bitlocker</code>, <code>last logon</code>, <code>install date</code>, <code>ResourceID</code>.</p>
+      <p>Everyday words work too: <code>ram</code>, <code>uptime</code>, <code>primary user</code>, <code>kb</code>, <code>maintenance window</code>. They're translated into ConfigMgr's names.</p>
       <p class="hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open</p>
       <p>Click any result to see its columns, its <code>fn_rbac_</code> twin, and which other views share its join keys.</p></div>`;
   }
@@ -340,7 +541,7 @@
     els.results.querySelectorAll('.item').forEach(it => it.setAttribute('aria-selected', String(current[+it.dataset.i]?.o.name === name)));
     const r = current.find(x => x.o.name === name);
     const hits = r ? r.hitCols : new Set();
-    const terms = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const hl = r ? r.hl : [];
 
     const paramSig = o.params.length ? '(' + o.params.map(p => p[0]).join(', ') + ')' : '';
     let rel = '';
@@ -350,6 +551,25 @@
     } else if (o.kind === 'function' && o.baseView) {
       rel = `Permission-filtered wrapper around <a class="link" data-go="${esc(o.baseView)}">${esc(o.baseView)}</a>. Built-in SSRS reports query this form.`;
     }
+    const aliasNote = o.aliases.length
+      ? `<div class="note">Also reachable by its old short name: ${o.aliases.map(a => `<code>${esc(a)}</code>`).join(', ')}. Older reports may use it.</div>` : '';
+
+    // Hardware inventory: where the data comes from, and whether it's collected out of the box
+    let hinvNote = '';
+    if (o.hinv) {
+      const h = o.hinv;
+      const src = h.class
+        ? `WMI class <code>${esc(h.class)}</code>${h.namespace ? ` in <code>${esc(h.namespace)}</code>` : ''}, listed in Client Settings as <b>${esc(h.display)}</b>.`
+        : `Hardware inventory class <b>${esc(h.display)}</b>.`;
+      if (!h.collected) {
+        hinvNote = `<div class="note warn"><b>Not collected by default.</b> Data comes from ${src}
+          Default Client Settings doesn't collect this class, so the view exists but stays empty until a client setting turns it on
+          (Client Settings → Hardware Inventory → Set Classes).</div>`;
+      } else {
+        const offN = o.columns.filter(c => o.offColumns.has(c.name)).length;
+        hinvNote = `<div class="note">Data comes from ${src}${offN ? ` Collected by default, but ${offN} of its properties aren't; those columns are marked <span class="tag">not collected</span> and stay empty until enabled in Set Classes.` : ' Collected by Default Client Settings.'}</div>`;
+      }
+    }
 
     // Join hints
     const joinCols = o.columns.map(c => c.name).filter(c => /ID$/.test(c) && !JOIN_STOP.has(c) && (DB.colIndex[c] || []).length >= 3);
@@ -358,7 +578,9 @@
       return { c, others };
     }).filter(j => j.others.length).sort((a, b) => b.others.length - a.others.length);
 
-    const selectCols = (hits.size ? o.columns.filter(c => hits.has(c.name)) : o.columns).map(c => c.name);
+    // The name matched the whole search? Then every column is relevant; otherwise just the matched ones.
+    const pick = hits.size && !(r && r.nameMatch);
+    const selectCols = (pick ? o.columns.filter(c => hits.has(c.name)) : o.columns).map(c => c.name);
     const from = o.kind === 'function' ? `${o.name}${paramSig || '(@UserSIDs)'}` : o.name;
     const sql = `SELECT\n  ${selectCols.join(',\n  ')}\nFROM ${from}`;
 
@@ -366,13 +588,17 @@
       <h2>${esc(o.name)}<span class="badge ${o.kind}">${o.kind}</span></h2>
       <div class="desc">${esc(o.cat)} · ${o.columns.length} columns${paramSig ? ' · parameters ' + esc(paramSig) : ''}</div>
       ${rel ? `<div>${rel}</div>` : ''}
+      ${hinvNote}${aliasNote}
       <div class="actions">
         <button data-copy="name">Copy name</button>
-        <button data-copy="sql">Copy SELECT${hits.size ? ` (${hits.size} matched column${hits.size === 1 ? '' : 's'})` : ''}</button>
+        <button data-copy="sql">Copy SELECT${pick ? ` (${selectCols.length} matched column${selectCols.length === 1 ? '' : 's'})` : ' (all columns)'}</button>
       </div>
       <section><h3>Columns</h3>
         <table><thead><tr><th>Column</th><th>Type</th><th>Null</th></tr></thead><tbody>
-        ${o.columns.map(c => `<tr class="${hits.has(c.name) ? 'hit' : ''}"><td class="mono">${highlight(c.name, terms)}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? 'yes' : ''}</td></tr>`).join('')}
+        ${o.columns.map(c => {
+          const off = o.offColumns.has(c.name);
+          return `<tr class="${[hits.has(c.name) ? 'hit' : '', off ? 'off' : ''].join(' ').trim()}"><td class="mono">${highlight(c.name, hl)}${off ? '<span class="tag">not collected</span>' : ''}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? 'yes' : ''}</td></tr>`;
+        }).join('')}
         </tbody></table>
       </section>
       ${joins.length ? `<section class="joins"><h3>Join hints: views sharing a key column</h3>
