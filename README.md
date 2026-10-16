@@ -25,7 +25,7 @@ Built on a single Proxmox VE host:
 | WIN11-01 | Windows 11 Enterprise test client |
 | vwhere-dev | Debian 13 container: development box |
 
-Lab machines live on an isolated, NATed network segment.
+Lab machines live on an isolated, NATed network segment. The full build, scripts, and every gotcha hit along the way are in [docs/lab-build.md](docs/lab-build.md).
 
 ## Contributing / working on this repo
 

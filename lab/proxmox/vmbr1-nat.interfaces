@@ -1,0 +1,14 @@
+# Appended to /etc/network/interfaces on the Proxmox host.
+# vmbr1: isolated lab bridge with no physical port. The host is the lab's gateway
+# and masquerades (NATs) lab traffic out through vmbr0 (the home network).
+# Apply with: ifreload -a
+
+auto vmbr1
+iface vmbr1 inet static
+    address 10.10.10.1/24
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+    post-up   echo 1 > /proc/sys/net/ipv4/ip_forward
+    post-up   iptables -t nat -A POSTROUTING -s 10.10.10.0/24 -o vmbr0 -j MASQUERADE
+    post-down iptables -t nat -D POSTROUTING -s 10.10.10.0/24 -o vmbr0 -j MASQUERADE
