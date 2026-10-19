@@ -21,6 +21,17 @@ python3 -m http.server 8000
 
 Opening `web/index.html` straight from disk also works: browsers block it from loading the JSON on their own, so the page asks you to pick or drop a `schema.json`. To point it at a different export, add `?data=<url>`.
 
+### Offline copy
+
+Build one self-contained file with the schema baked in:
+
+```sh
+python3 tools/build_offline.py
+# -> dist/v_where.html (about 1 MB)
+```
+
+Copy `dist/v_where.html` anywhere and double-click it. No server, network, or install needed. Rebuild after the page or the schema changes. Use `--schema` and `--out` to bake in a different export.
+
 - Type words or a phrase (`last logon`, `install date`); results rank views whose names or columns match at word boundaries highest.
 - Everyday words are translated into ConfigMgr's names: `ram` → physical memory, `uptime` → LastBootUpTime, `primary user` → user machine relationship, `kb` → ArticleID. The list lives in `SYNONYMS` at the top of the page's script.
 - Hardware inventory views show the WMI class behind them, and flag classes and columns that Default Client Settings doesn't collect (the view exists but stays empty until you enable them).

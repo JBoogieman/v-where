@@ -16,6 +16,9 @@ config.local.*
 *.local.csv
 *.local.json
 
+# --- Build output: regenerate with tools/build_offline.py ---
+/dist/
+
 # --- Python ---
 __pycache__/
 *.pyc

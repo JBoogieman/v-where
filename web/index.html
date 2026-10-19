@@ -112,6 +112,8 @@
 <footer id="footer">Schema-only reference: view and column names and types. No ConfigMgr data.</footer>
 <div class="toast" id="toast"></div>
 
+<!-- Empty here. tools/build_offline.py fills it with schema.json to make a single offline file. -->
+<script id="embedded-schema" type="application/json"></script>
 <script>
 (() => {
   'use strict';
@@ -258,12 +260,16 @@
   let sel = -1;
 
   // ---------- Data loading ----------
+  // Offline build: the schema is baked into the page. Otherwise fetch it (or ?data=<url>).
   const params = new URLSearchParams(location.search);
   const DATA_URL = params.get('data') || '../data/schema.json';
+  const embedded = document.getElementById('embedded-schema').textContent.trim();
 
-  fetch(DATA_URL).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(init)
-    .catch(() => showDropZone());
+  // Either way init runs after this script finishes, once every helper below is defined.
+  const load = (embedded && !params.has('data'))
+    ? Promise.resolve().then(() => JSON.parse(embedded))
+    : fetch(DATA_URL).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  load.then(init).catch(() => showDropZone());
 
   function showDropZone() {
     els.stats.textContent = 'No schema loaded';
