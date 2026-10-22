@@ -4,6 +4,8 @@
 
 > **Status:** work in progress. Lab is built; the search page works against the lab export (841 views, 625 `fn_rbac_` functions).
 
+**Live:** https://jboogieman.github.io/v-where/
+
 ## How it works
 
 - **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) plus its hardware inventory class definitions, and writes them to JSON. Windows authentication, read-only, never reads device or user data. `-SchemaOnly` skips the class definitions.
@@ -63,13 +65,3 @@ Built on a single Proxmox VE host:
 | vwhere-dev | Debian 13 container: development box |
 
 Lab machines live on an isolated, NATed network segment. The full build, scripts, and every gotcha hit along the way are in [docs/lab-build.md](docs/lab-build.md).
-
-## Contributing / working on this repo
-
-Enable the repo's guardrail hooks after cloning:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-The hooks block a commit if it contains secrets (via [gitleaks](https://github.com/gitleaks/gitleaks)), terms from a local private blocklist, or an author email that isn't a GitHub noreply address.

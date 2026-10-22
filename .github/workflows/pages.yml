@@ -1,0 +1,39 @@
+# On every push to main: run the same offline build you run locally, then
+# publish the single-file page to GitHub Pages at
+# https://jboogieman.github.io/v-where/
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read            # read the repo
+  pages: write              # publish to Pages
+  id-token: write           # lets deploy-pages prove the deploy came from this repo
+
+concurrency:
+  group: pages
+  cancel-in-progress: true  # a newer push replaces an in-flight deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Bakes data/schema.json into web/index.html. The runner already has Python 3.
+      - run: python3 tools/build_offline.py --out _site/index.html
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
