@@ -52,6 +52,10 @@
     'v_CH_ClientSummary',
   ]);
 
+  // One row per user / update / collection. Joined through a bridge they add no repeats of their own
+  // (the bridge's note already covers it), so they don't get a warning.
+  const ONE_PER_KEY = new Set(['v_R_User', 'v_UpdateInfo', 'v_Collection']);
+
   // For common multi-row views: what to add to the join to keep one row per device
   const PICK_ONE = {
     v_GS_BITLOCKER_DETAILS:             ['DriveLetter0', "= 'C:'", 'one row per drive'],
@@ -107,6 +111,7 @@
    *   viewNames  views the report pulls columns from, in the order picked
    *   lookup     name -> { name, columns: [column names], rbacFn: 'fn_rbac_...' | null } or null
    *   opts.collection  true: keep only members of one collection (@CollectionID)
+   *   opts.keepOne     views whose "keep one row per device" fix (PICK_ONE) goes into the join
    * Returns { anchor, from, joins[], alias{}, warnings[], unplaced[] }
    *   from / joins[i]: { view, alias, type: 'JOIN' | 'LEFT JOIN', on, role: 'hub'|'filter'|'bridge'|'data' }
    */
@@ -177,26 +182,32 @@
       const k = info[n].keys;
       if (k.user) {
         const b = bridge('user');
-        place(n, 'LEFT JOIN', `{${n}}.${k.user} = {${b.view}}.${b.other}`, 'data');
+        place(n, 'LEFT JOIN', `{${n}}.${k.user} = {${b.view}}.${b.other}`, 'data').viaBridge = b.view;
       } else if (k.ci) {
         const via = placedWith('CI_ID') || null;
         const viaView = via ? via.view : bridge(/update/i.test(n) ? 'update' : 'ci').view;
-        place(n, 'LEFT JOIN', `{${n}}.CI_ID = {${viaView}}.CI_ID`, 'data');
+        place(n, 'LEFT JOIN', `{${n}}.CI_ID = {${viaView}}.CI_ID`, 'data').viaBridge = viaView;
       } else if (k.coll) {
         const viaView = has(BRIDGES.collection.view) ? BRIDGES.collection.view : bridge('collection').view;
-        place(n, 'LEFT JOIN', `{${n}}.CollectionID = {${viaView}}.CollectionID`, 'data');
+        place(n, 'LEFT JOIN', `{${n}}.CollectionID = {${viaView}}.CollectionID`, 'data').viaBridge = viaView;
       } else {
         unplaced.push({ view: n, why: 'No key column that links it to devices (ResourceID, MachineID, CI_ID, CollectionID). Query it on its own.' });
       }
     }
 
-    // 5) Row warnings for data views
+    // 5) Row warnings for data views. opts.keepOne lists views whose suggested fix should be applied.
+    const keep = new Set(opts.keepOne || []);
     for (const j of joins) {
-      if (j.role !== 'data' || ONE_ROW.has(j.view)) continue;
+      if (j.role !== 'data' || ONE_ROW.has(j.view) || (j.viaBridge && ONE_PER_KEY.has(j.view))) continue;
       const p = PICK_ONE[j.view];
-      warnings.push(p
-        ? { view: j.view, text: `${j.view} has ${p[2]}.`, fix: `AND ${j.alias}.${p[0]} ${p[1]}` }
-        : { view: j.view, text: `${j.view} can return more than one row per device. Check the results for repeats.` });
+      if (p && keep.has(j.view)) {
+        j.on += ` AND ${j.alias}.${p[0]} ${p[1]}`;
+        warnings.push({ view: j.view, text: `${j.view} has ${p[2]}; keeping ${p[0]} ${p[1]}.`, kept: true });
+      } else {
+        warnings.push(p
+          ? { view: j.view, text: `${j.view} has ${p[2]}.`, fix: `AND ${j.alias}.${p[0]} ${p[1]}` }
+          : { view: j.view, text: `${j.view} can return more than one row per device. Check the results for repeats.` });
+      }
     }
 
     return { anchor, from, joins, alias, warnings, unplaced };
