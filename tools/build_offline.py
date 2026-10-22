@@ -11,6 +11,7 @@ Usage (from the repo root):
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -25,6 +26,13 @@ def main() -> int:
     args = ap.parse_args()
 
     page = args.page.read_text(encoding='utf-8')
+    # Inline local scripts (<script src="joinplan.js"></script>) so the output stays one file.
+    def inline(m):
+        js = (args.page.parent / m.group(1)).read_text(encoding='utf-8')
+        if '</script' in js.lower():
+            raise SystemExit(f'error: {m.group(1)} contains "</script", which would end the inline tag early')
+        return '<script>\n' + js + '</script>'
+    page = re.sub(r'<script src="([\w.-]+\.js)"></script>', inline, page)
     if page.count(PLACEHOLDER) != 1:
         print(f'error: {args.page} must contain the empty embedded-schema tag exactly once', file=sys.stderr)
         return 1
