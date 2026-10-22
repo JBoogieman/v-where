@@ -55,6 +55,14 @@ test('multi-row view warns and suggests the filter',
     assert.match(sql, /-- .*one row per drive.*DriveLetter0/);
   });
 
+test('keepOne applies the fix inside the join',
+  [C('v_R_System', 'Name0'), C('v_GS_BITLOCKER_DETAILS', 'ProtectionStatus0')], { keepOne: ['v_GS_BITLOCKER_DETAILS'] },
+  (p, sql) => {
+    assert.strictEqual(on(p, 'v_GS_BITLOCKER_DETAILS'), "bl.ResourceID = sys.ResourceID AND bl.DriveLetter0 = 'C:'");
+    assert.ok(p.warnings.some(w => w.view === 'v_GS_BITLOCKER_DETAILS' && w.kept && !w.fix));
+    assert.doesNotMatch(sql, /To keep one/);
+  });
+
 test('unknown multi-row view gets a generic warning',
   [C('v_GS_SYSTEM_CONSOLE_USER', 'SystemConsoleUser0')], {},
   (p) => assert.ok(p.warnings.some(w => w.view === 'v_GS_SYSTEM_CONSOLE_USER' && !w.fix)));
@@ -69,6 +77,7 @@ test('user view on a device report goes through v_UsersPrimaryMachines',
     assert.strictEqual(on(p, 'v_UsersPrimaryMachines'), 'upm.MachineID = sys.ResourceID');
     assert.strictEqual(on(p, 'v_R_User'), 'usr.ResourceID = upm.UserResourceID');
     assert.ok(p.warnings.some(w => w.view === 'v_UsersPrimaryMachines'), 'bridge should explain itself');
+    assert.ok(!p.warnings.some(w => w.view === 'v_R_User'), 'v_R_User is one row per user: the bridge note covers repeats');
   });
 
 test('picked v_UsersPrimaryMachines is reused as the bridge, not added twice',
