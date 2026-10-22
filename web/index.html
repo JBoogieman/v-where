@@ -110,6 +110,15 @@
   .opts .hint { color: var(--muted); font-size: 12px; }
   pre.sql { font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow: auto; margin: 8px 0; }
   .note button { margin-left: 6px; padding: 1px 8px; font-size: 12px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+  .rdlrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .rdlrow label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .rdlrow input { font: 13px var(--sans); padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--text); }
+  .rdlrow .title input { width: 260px; max-width: 70vw; }
+  .rdlrow .site input { width: 70px; text-transform: uppercase; font-family: var(--mono); }
+  .rdlrow input.need { border-color: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+  #basket .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
   @media (max-width: 760px) {
     main { grid-template-columns: 1fr; grid-template-rows: 45% 55%; }
     #results { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -142,8 +151,9 @@
 
 <!-- Empty here. tools/build_offline.py fills it with schema.json to make a single offline file. -->
 <script id="embedded-schema" type="application/json"></script>
-<!-- Join planner (window.VWhereJoin). tools/build_offline.py inlines it. -->
+<!-- Join planner (window.VWhereJoin) and .rdl builder (window.VWhereRDL). tools/build_offline.py inlines them. -->
 <script src="joinplan.js"></script>
+<script src="rdl.js"></script>
 <script>
 (() => {
   'use strict';
@@ -671,9 +681,9 @@
   function loadReport() {
     try {
       const r = JSON.parse(localStorage.getItem(STORE) || 'null');
-      if (r && Array.isArray(r.cols)) return { cols: r.cols, collection: r.collection !== false, rbac: !!r.rbac, keepOne: r.keepOne || [] };
+      if (r && Array.isArray(r.cols)) return { cols: r.cols, collection: r.collection !== false, rbac: !!r.rbac, keepOne: r.keepOne || [], title: r.title || '', site: r.site || '' };
     } catch (e) { /* private window or blocked storage: start empty */ }
-    return { cols: [], collection: true, rbac: false, keepOne: [] };
+    return { cols: [], collection: true, rbac: false, keepOne: [], title: '', site: '' };
   }
   function saveReport() { try { localStorage.setItem(STORE, JSON.stringify(report)); } catch (e) { /* not saved, still works */ } }
 
@@ -705,10 +715,31 @@
     toast(i >= 0 ? `Removed ${col}` : `Added ${col} · ${report.cols.length} in report`);
   }
 
-  function draft() {
-    const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne };
+  function draft(force) {
+    const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne, ...force };
     const p = VWhereJoin.plan(report.cols.map(c => c.view), lookup, opts);
     return { p, sql: VWhereJoin.toSQL(p, report.cols, lookup, opts) };
+  }
+
+  // The .rdl always uses the SSRS version (fn_rbac_ + @UserSIDs), like built-in ConfigMgr reports
+  function downloadRdl() {
+    const site = (report.site || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{3}$/.test(site)) {
+      const inp = els.basket.querySelector('[data-meta="site"]');
+      if (inp) { inp.classList.add('need'); inp.focus(); }
+      toast('Enter your 3-character site code first');
+      return;
+    }
+    const { p, sql } = draft({ rbac: true });
+    const typeOf = (view, col) => ((DB.byName[view] || { columns: [] }).columns.find(c => c.name === col) || {}).type;
+    const columns = VWhereJoin.headers(p, report.cols).map(h => ({ name: h.name, type: typeOf(h.view, h.column) }));
+    const xml = VWhereRDL.build({ title: report.title || 'Report draft', siteCode: site, sql, columns, collection: report.collection });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
+    a.download = VWhereRDL.fileName(report.title);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast(`Downloaded ${a.download}`);
   }
 
   function openBasket(open) {
@@ -746,6 +777,15 @@
           ? `<div class="note">${esc(w.text)}<button type="button" data-unkeep="${esc(w.view)}">Undo</button></div>`
           : `<div class="note warn">${esc(w.text)}${w.fix ? `<button type="button" data-keep="${esc(w.view)}">Keep one row: ${esc(w.fix.replace(/^AND /, ''))}</button>` : ''}</div>`).join('')}
         ${p.unplaced.map(u => `<div class="note warn"><b>Left out ${esc(u.view)}.</b> ${esc(u.why)}</div>`).join('')}
+        <section><h3>Download as a ConfigMgr report</h3>
+          <div class="rdlrow">
+            <label class="title">Report name<input type="text" data-meta="title" value="${esc(report.title)}" placeholder="Report draft"></label>
+            <label class="site">Site code<input type="text" data-meta="site" value="${esc(report.site)}" maxlength="3" placeholder="PS1" spellcheck="false"></label>
+            <button type="button" class="primary" data-rdl>Download .rdl</button>
+          </div>
+          <p class="hint">Upload it to your <code>ConfigMgr_&lt;site&gt;</code> folder in the SSRS web portal, or open it in Report Builder. It uses the
+            site's shared data source, a collection picker, and the <code>fn_rbac_</code> functions, so it respects console permissions like built-in reports.</p>
+        </section>
         <section><h3>Query</h3><pre class="sql">${esc(sql)}</pre></section>
         <div class="actions"><button type="button" data-copysql>Copy query</button><button type="button" data-clear>Clear report</button></div>`;
     }
@@ -815,6 +855,7 @@
     else if (d.keep) report.keepOne = [...new Set(report.keepOne.concat(d.keep))];
     else if (d.unkeep) report.keepOne = report.keepOne.filter(v => v !== d.unkeep);
     else if ('copysql' in d) return copy(draft().sql, 'Query copied');
+    else if ('rdl' in d) return downloadRdl();
     else if ('clear' in d) {
       // Two clicks to clear, so a stray click doesn't wipe the draft
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Click again to clear'; return; }
@@ -828,6 +869,13 @@
     if (opt) { report[opt] = e.target.checked; reportChanged(); }
   });
   els.basket.addEventListener('input', e => {
+    const meta = e.target.dataset.meta;
+    if (meta) {
+      report[meta] = meta === 'site' ? e.target.value.trim().toUpperCase() : e.target.value;
+      e.target.classList.remove('need');
+      saveReport();
+      return;
+    }
     const i = e.target.dataset.label;
     if (i === undefined) return;
     report.cols[+i].as = e.target.value.trim() || undefined;

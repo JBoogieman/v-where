@@ -229,21 +229,29 @@
    *   columns    [{ view, column, as? }] in display order
    *   opts.rbac  true: use fn_rbac_ functions with @UserSIDs (what SSRS reports should use)
    */
+  /**
+   * headers(plan, columns) -> [{ view, column, name }] : the output column names, unique.
+   * toSQL uses these as the AS [...] aliases; the .rdl builder uses them as field names.
+   */
+  function headers(p, columns) {
+    const seen = new Set();
+    return columns.filter(c => p.alias[c.view]).map(c => {
+      let as = (c.as || label(c.column)).replace(/[\[\]]/g, '');
+      if (seen.has(as.toLowerCase())) as = `${viewLabel(c.view)} ${as}`;   // two "Name" columns -> "Operating System Name"
+      let n = as, i = 2;
+      while (seen.has(n.toLowerCase())) n = `${as} ${i++}`;
+      seen.add(n.toLowerCase());
+      return { view: c.view, column: c.column, name: n };
+    });
+  }
+
   function toSQL(p, columns, lookup, opts = {}) {
     const src = (view) => {
       if (!opts.rbac) return view;
       const v = lookup(view);
       return v && v.rbacFn ? `${v.rbacFn}(@UserSIDs)` : view;
     };
-    const seen = new Set();
-    const sel = columns.filter(c => p.alias[c.view]).map(c => {
-      let as = c.as || label(c.column);
-      if (seen.has(as.toLowerCase())) as = `${viewLabel(c.view)} ${as}`;   // two "Name" columns -> "Operating System Name"
-      let n = as, i = 2;
-      while (seen.has(n.toLowerCase())) n = `${as} ${i++}`;
-      seen.add(n.toLowerCase());
-      return `${p.alias[c.view]}.${c.column} AS [${n}]`;
-    });
+    const sel = headers(p, columns).map(h => `${p.alias[h.view]}.${h.column} AS [${h.name}]`);
     const lines = ['SELECT', '  ' + (sel.length ? sel.join(',\n  ') : `${p.from.alias}.Name0`), `FROM ${src(p.from.view)} ${p.from.alias}`];
     for (const j of p.joins) {
       lines.push(`${j.type} ${src(j.view)} ${j.alias} ON ${j.on}`);
@@ -258,7 +266,7 @@
     return lines.join('\n');
   }
 
-  const api = { plan, toSQL, label, classify, HUB, BRIDGES, ONE_ROW, PICK_ONE };
+  const api = { plan, toSQL, headers, label, classify, HUB, BRIDGES, ONE_ROW, PICK_ONE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.VWhereJoin = api;
 })(this);
