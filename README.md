@@ -12,6 +12,7 @@
 - **Data** ([`data/schema.json`](data/schema.json)): the export from the lab site.
 - **Search page** ([`web/index.html`](web/index.html)): one static HTML/JS file that searches that JSON. No server-side code, no database, no install.
 - **Join planner** ([`web/joinplan.js`](web/joinplan.js)): turns a set of picked columns into one query. `v_R_System` sits in the middle; device views join on `ResourceID`/`MachineID`, and users, updates and collections join through a bridge view (`v_UsersPrimaryMachines`, `v_UpdateComplianceStatus`, `v_FullCollectionMembership`). Tests: `node tools/test_joinplan.js` (add `--show` to print the queries).
+- **Report builder** ([`web/rdl.js`](web/rdl.js)): turns a report draft into an SSRS report definition (`.rdl`) shaped like ConfigMgr's built-in reports: the site's shared data source, the hidden `UserTokenSIDs`/`UserSIDs` parameters so `fn_rbac_` functions respect console permissions, a collection picker, and a table with sortable headers. Tests: `node tools/test_rdl.js`.
 
 ### Try it
 
@@ -41,6 +42,7 @@ Copy `dist/v_where.html` anywhere and double-click it. No server, network, or in
 - Category chips filter by area (Discovery, Hardware inventory, Software updates...).
 - Each view links to its `fn_rbac_` twin for RBAC-filtered SSRS reports, and **Copy SELECT** builds a query from the columns you matched.
 - **Report draft:** click **+** next to columns in any views, then open **Report draft**. v_Where writes the joins, warns when a view repeats devices (one row per drive, per adapter...) with a one-click fix, filters to one collection with `@CollectionID`, and can switch everything to `fn_rbac_` functions with `@UserSIDs` for SSRS. Rename columns to set report headers. The draft stays in your browser between visits.
+- **Download .rdl:** enter a report name and your site code, and the draft downloads as a ConfigMgr-ready report. Upload it to the `ConfigMgr_<site>` folder (or a subfolder) in the SSRS web portal, or open it in Report Builder and save it there; it then shows up in the console under **Monitoring > Reporting > Reports**. The layout is deliberately plain (title, collection and row count, one table), so the only work left is formatting.
 - The URL updates as you search, so a link takes someone straight to the same result.
 
 ### Use your own site's schema
