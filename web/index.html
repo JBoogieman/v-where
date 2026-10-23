@@ -102,6 +102,7 @@
   .bcols input[type="text"] { width: 100%; font: 13px var(--sans); padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--text); }
   .bcols .src { font: 11px var(--mono); color: var(--muted); word-break: break-word; overflow-wrap: anywhere; }
   .bcols .src .col { font-size: 12px; color: var(--text); }
+  .tag.fmt { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-size: 10px; }
   .bcols .src a.link { font-size: 11px; }
   .bcols .mv { white-space: nowrap; }
   .bcols .mv button { padding: 2px 7px; }
@@ -681,14 +682,18 @@
   function loadReport() {
     try {
       const r = JSON.parse(localStorage.getItem(STORE) || 'null');
-      if (r && Array.isArray(r.cols)) return { cols: r.cols, collection: r.collection !== false, rbac: !!r.rbac, keepOne: r.keepOne || [], title: r.title || '', site: r.site || '' };
+      if (r && Array.isArray(r.cols)) return { cols: r.cols, collection: r.collection !== false, rbac: !!r.rbac, keepOne: r.keepOne || [],
+        readable: r.readable !== false, skipUnknown: r.skipUnknown !== false, title: r.title || '', site: r.site || '' };
     } catch (e) { /* private window or blocked storage: start empty */ }
-    return { cols: [], collection: true, rbac: false, keepOne: [], title: '', site: '' };
+    return { cols: [], collection: true, rbac: false, keepOne: [], readable: true, skipUnknown: true, title: '', site: '' };
   }
   function saveReport() { try { localStorage.setItem(STORE, JSON.stringify(report)); } catch (e) { /* not saved, still works */ } }
 
-  // The planner wants { name, columns: [names], rbacFn }
-  const lookup = (n) => { const o = DB && DB.byName[n]; return o ? { name: o.name, columns: o.columns.map(c => c.name), rbacFn: o.rbacFn } : null; };
+  // The planner wants { name, columns: [names], types: { column: sqlType }, rbacFn }
+  const lookup = (n) => {
+    const o = DB && DB.byName[n];
+    return o ? { name: o.name, columns: o.columns.map(c => c.name), types: Object.fromEntries(o.columns.map(c => [c.name, c.type])), rbacFn: o.rbacFn } : null;
+  };
   // Reports are planned on v_ views. A fn_rbac_ function's columns go in as its view; "SSRS version" swaps it back.
   const reportView = (o) => o.kind === 'view' ? o.name : (o.baseView && DB.byName[o.baseView] ? o.baseView : null);
   const inReport = (view, col) => report.cols.findIndex(c => c.view === view && c.column === col);
@@ -716,7 +721,8 @@
   }
 
   function draft(force) {
-    const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne, ...force };
+    const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne,
+      readable: report.readable, skipUnknown: report.skipUnknown, ...force };
     const p = VWhereJoin.plan(report.cols.map(c => c.view), lookup, opts);
     return { p, sql: VWhereJoin.toSQL(p, report.cols, lookup, opts) };
   }
@@ -732,7 +738,8 @@
     }
     const { p, sql } = draft({ rbac: true });
     const typeOf = (view, col) => ((DB.byName[view] || { columns: [] }).columns.find(c => c.name === col) || {}).type;
-    const columns = VWhereJoin.headers(p, report.cols).map(h => ({ name: h.name, type: typeOf(h.view, h.column) }));
+    const columns = VWhereJoin.headers(p, report.cols, { readable: report.readable })
+      .map(h => ({ name: h.name, type: h.outType || typeOf(h.view, h.column) }));
     const xml = VWhereRDL.build({ title: report.title || 'Report draft', siteCode: site, sql, columns, collection: report.collection });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
@@ -740,6 +747,12 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast(`Downloaded ${a.download}`);
+  }
+
+  // The header a column gets when not renamed: "Total Physical Memory (GB)" with readable values on
+  function defaultHeader(c) {
+    const f = report.readable && VWhereJoin.formatOf(c.view, c.column);
+    return VWhereJoin.label(c.column) + (f && f.kind === 'size' ? ` (${f.unit})` : '');
   }
 
   function openBasket(open) {
@@ -762,14 +775,18 @@
       body = `<p class="lead">${cols.length} column${cols.length === 1 ? '' : 's'} from ${views} view${views === 1 ? '' : 's'}. Rename a column to set its report header.</p>
         <table class="bcols"><thead><tr><th>Header</th><th>From</th><th></th></tr></thead><tbody>
         ${cols.map((c, i) => `<tr>
-          <td><input type="text" data-label="${i}" value="${esc(c.as || '')}" placeholder="${esc(VWhereJoin.label(c.column))}" aria-label="Header for ${esc(c.column)}"></td>
-          <td class="src"><div class="col">${esc(c.column)}</div><a class="link" data-go="${esc(c.view)}" title="Open ${esc(c.view)}">${esc(c.view)}</a></td>
+          <td><input type="text" data-label="${i}" value="${esc(c.as || '')}" placeholder="${esc(defaultHeader(c))}" aria-label="Header for ${esc(c.column)}"></td>
+          <td class="src"><div class="col">${esc(c.column)}${report.readable && VWhereJoin.formatOf(c.view, c.column) ? `<span class="tag fmt" title="Readable values: shown as ${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}">${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}</span>` : ''}</div><a class="link" data-go="${esc(c.view)}" title="Open ${esc(c.view)}">${esc(c.view)}</a></td>
           <td class="mv"><button type="button" data-up="${i}" title="Move up" ${i ? '' : 'disabled'}>↑</button> <button type="button" data-down="${i}" title="Move down" ${i < cols.length - 1 ? '' : 'disabled'}>↓</button> <button type="button" data-rm="${i}" title="Remove">✕</button></td>
         </tr>`).join('')}
         </tbody></table>
         <div class="opts">
           <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
             <span>Only devices in one collection <span class="hint">(adds <code>@CollectionID</code>, like built-in reports)</span></span></label>
+          <label><input type="checkbox" data-opt="readable" ${report.readable ? 'checked' : ''}>
+            <span>Readable values <span class="hint">(memory in GB, status codes as words, 1/0 as Yes/No; disk sizes stay raw because ConfigMgr versions store them in different units)</span></span></label>
+          <label><input type="checkbox" data-opt="skipUnknown" ${report.skipUnknown ? 'checked' : ''}>
+            <span>Skip Unknown Computer rows <span class="hint">(the two OS deployment placeholders in All Systems)</span></span></label>
           <label><input type="checkbox" data-opt="rbac" ${report.rbac ? 'checked' : ''}>
             <span>SSRS version <span class="hint">(<code>fn_rbac_</code> functions with <code>@UserSIDs</code>, so people only see what their console role allows)</span></span></label>
         </div>
