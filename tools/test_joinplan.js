@@ -10,7 +10,7 @@ const J = require('../web/joinplan.js');
 const ROOT = path.resolve(__dirname, '..');
 const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'schema.json'), 'utf8'));
 const byName = {};
-for (const o of schema.objects) byName[o.name] = { name: o.name, columns: o.columns.map(c => c[0]), rbacFn: null, baseView: o.baseView };
+for (const o of schema.objects) byName[o.name] = { name: o.name, columns: o.columns.map(c => c[0]), types: Object.fromEntries(o.columns.map(c => [c[0], c[1]])), rbacFn: null, baseView: o.baseView };
 for (const o of Object.values(byName)) if (o.baseView && byName[o.baseView]) byName[o.baseView].rbacFn = o.name;
 const lookup = (n) => byName[n] || null;
 const SHOW = process.argv.includes('--show');
@@ -24,7 +24,57 @@ function test(title, cols, opts, check) {
   if (SHOW) console.log('\n' + sql + '\n');
 }
 const on = (p, view) => (p.joins.find(j => j.view === view) || {}).on;
-const C = (view, column) => ({ view, column });
+const C = (view, column, as) => ({ view, column, as });
+
+// ---- Readable values ----
+test('readable: memory KB -> GB, header gets the unit',
+  [C('v_R_System', 'Name0'), C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0')], { readable: true },
+  (p, sql) => assert.match(sql, /CAST\(ROUND\(mem\.TotalPhysicalMemory0 \/ 1048576\.0, 1\) AS decimal\(10,1\)\) AS \[Total Physical Memory \(GB\)\]/));
+
+test('readable: a renamed column keeps its name',
+  [C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0', 'RAM')], { readable: true },
+  (p, sql) => assert.match(sql, /AS decimal\(10,1\)\) AS \[RAM\]/));
+
+test('readable: BitLocker status codes -> On/Off, unknown codes pass through',
+  [C('v_GS_BITLOCKER_DETAILS', 'ProtectionStatus0')], { readable: true },
+  (p, sql) => assert.match(sql, /CASE bl\.ProtectionStatus0 WHEN 0 THEN 'Off' WHEN 1 THEN 'On' WHEN 2 THEN 'Unknown' ELSE CAST\(bl\.ProtectionStatus0 AS varchar\(20\)\) END AS \[Protection Status\]/));
+
+test('readable: text-typed code column compares to quoted values (ChassisTypes0 is nvarchar)',
+  [C('v_GS_SYSTEM_ENCLOSURE', 'ChassisTypes0')], { readable: true },
+  (p, sql) => { assert.match(sql, /CASE enc\.ChassisTypes0 WHEN '1' THEN 'Other'/); assert.match(sql, /WHEN '3' THEN 'Desktop'/); assert.match(sql, /WHEN '10' THEN 'Notebook'/); assert.match(sql, /ELSE enc\.ChassisTypes0 END/); });
+
+test('readable: client flag NULL means No; firmware yes/no keeps blanks',
+  [C('v_R_System', 'Client0'), C('v_GS_FIRMWARE', 'SecureBoot0')], { readable: true },
+  (p, sql) => {
+    assert.match(sql, /CASE WHEN sys\.Client0 = 1 THEN 'Yes' ELSE 'No' END AS \[Client\]/);
+    assert.match(sql, /CASE f\.SecureBoot0 WHEN 1 THEN 'Yes' WHEN 0 THEN 'No' END AS \[Secure Boot\]/);
+  });
+
+test('readable off: raw columns, no unit in the header',
+  [C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0')], { readable: false },
+  (p, sql) => assert.match(sql, /mem\.TotalPhysicalMemory0 AS \[Total Physical Memory\]/));
+
+test('headers report the new output type for the .rdl',
+  [C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0'), C('v_GS_BITLOCKER_DETAILS', 'ProtectionStatus0'), C('v_R_System', 'Name0')], { readable: true },
+  (p) => assert.deepStrictEqual(J.headers(p, [C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0'), C('v_GS_BITLOCKER_DETAILS', 'ProtectionStatus0'), C('v_R_System', 'Name0')], { readable: true }).map(h => h.outType), ['decimal', 'varchar', null]));
+
+test('every format points at a column that exists in the schema',
+  [C('v_R_System', 'Name0')], {},
+  () => {
+    for (const key of Object.keys(J.FORMATS)) {
+      const [view, col] = key.split('.');
+      assert.ok(byName[view] && byName[view].columns.includes(col), `${key} not in schema`);
+    }
+  });
+
+// ---- Unknown Computer placeholders ----
+test('skipUnknown adds the WHERE on the hub',
+  [C('v_R_System', 'Name0')], { skipUnknown: true, collection: true },
+  (p, sql) => assert.match(sql, /^WHERE ISNULL\(sys\.Unknown0, 0\) = 0/m));
+
+test('skipUnknown does nothing on a user-only report',
+  [C('v_R_User', 'Mail0')], { skipUnknown: true },
+  (p, sql) => assert.doesNotMatch(sql, /Unknown0/));
 
 test('device report: everything joins to v_R_System on ResourceID',
   [C('v_R_System', 'Name0'), C('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0'), C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0')], {},

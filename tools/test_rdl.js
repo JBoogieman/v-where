@@ -23,7 +23,7 @@ function makeReport(cols, opts, title) {
   const o = { ...opts, rbac: true };
   const p = J.plan(cols.map(c => c.view), lookup, o);
   const sql = J.toSQL(p, cols, lookup, o);
-  const columns = J.headers(p, cols).map(h => ({ name: h.name, type: byName[h.view].types[h.column] }));
+  const columns = J.headers(p, cols, o).map(h => ({ name: h.name, type: h.outType || byName[h.view].types[h.column] }));
   return R.build({ title, siteCode: 'lab', sql, columns, collection: o.collection });
 }
 
@@ -103,6 +103,18 @@ test('headers sort and repeat on each page', () => {
   assert.ok(full.includes('<RepeatOnNewPage>true</RepeatOnNewPage>'));
 });
 
+const readable = makeReport([C('v_R_System', 'Name0', 'Device'), C('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0'),
+  C('v_GS_BITLOCKER_DETAILS', 'ProtectionStatus0'), C('v_GS_SYSTEM_ENCLOSURE', 'ChassisTypes0')],
+  { collection: true, readable: true, skipUnknown: true }, 'Readable');
+
+test('readable values: converted columns get their new types and unit headers', () => {
+  wellFormed(readable);
+  assert.ok(readable.includes('<Field Name="Total_Physical_Memory_GB"><DataField>Total Physical Memory (GB)</DataField><rd:TypeName>System.Decimal</rd:TypeName></Field>'));
+  assert.ok(readable.includes('<Field Name="Protection_Status"><DataField>Protection Status</DataField><rd:TypeName>System.String</rd:TypeName></Field>'));
+  assert.ok(readable.includes("WHEN 1 THEN &apos;On&apos;") || readable.includes("WHEN 1 THEN 'On'"), 'CASE in the query');
+  assert.ok(readable.includes('WHERE ISNULL(sys.Unknown0, 0) = 0'));
+});
+
 test('type mapping', () => {
   assert.strictEqual(R.netType('nvarchar(255)'), 'System.String');
   assert.strictEqual(R.netType('datetime'), 'System.DateTime');
@@ -112,7 +124,7 @@ test('type mapping', () => {
 
 if (WRITE) {
   fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
-  for (const [n, x] of Object.entries({ full, plain, weird })) fs.writeFileSync(path.join(ROOT, 'dist', `sample_${n}.rdl`), x);
+  for (const [n, x] of Object.entries({ full, plain, weird, readable })) fs.writeFileSync(path.join(ROOT, 'dist', `sample_${n}.rdl`), x);
   console.log('wrote dist/sample_*.rdl');
 }
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}`);
