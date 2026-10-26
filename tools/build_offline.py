@@ -37,7 +37,7 @@ def main() -> int:
         print(f'error: {args.page} must contain the empty embedded-schema tag exactly once', file=sys.stderr)
         return 1
 
-    raw = args.schema.read_text(encoding='utf-8')
+    raw = args.schema.read_text(encoding='utf-8-sig')   # utf-8-sig: sqlcmd may write a byte order mark
     data = json.loads(raw)                      # fail fast on a broken export
     # Re-serialize compactly; escape "</" so nothing in the data can end the <script> tag early.
     payload = json.dumps(data, separators=(',', ':'), ensure_ascii=False).replace('</', '<\\/')
