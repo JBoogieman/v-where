@@ -8,7 +8,7 @@
 
 ## How it works
 
-1. **Search in plain words:** `ram`, `last boot`, `bitlocker`, `primary user`. Everyday words are translated into ConfigMgr's names, and results list the views (tables) that hold the data, with the matching columns highlighted.
+1. **Search in plain words:** `ram`, `last boot`, `bitlocker`, `primary user`. Everyday words are translated into ConfigMgr's names, and results list the views (tables) that hold the data, with the matching columns listed first and highlighted.
 2. **Click + on the columns you want,** from as many views as you need.
 3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, and gives you the SQL or a ConfigMgr-ready `.rdl` report.
 
@@ -19,6 +19,7 @@ Hover over anything on the page for a short explanation, or open **How it works*
 - **841 views, 625 permission-filtered `fn_rbac_` functions and 22,457 columns** from a ConfigMgr current branch lab site.
 - **Which hardware inventory classes and columns aren't collected by default:** the view exists but stays empty until someone turns them on in Client Settings.
 - **The Windows (WMI) class behind each inventory view,** and each view's `fn_rbac_` version for SSRS reports.
+- **Plain-English descriptions for about 160 of the most-used columns,** like "Installed memory, in KB" under `TotalPhysicalMemory0`.
 
 ## What it touches
 
@@ -31,7 +32,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
 | Use your own site's schema | Run `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
 | Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
-| Run the tests | `node tools/test_joinplan.js` and `node tools/test_rdl.js` |
+| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js` and `node tools/test_rdl.js` |
 
 ## Docs
 
@@ -46,7 +47,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 
 | Path | What's there |
 | --- | --- |
-| `web/` | The page (`index.html`), the join planner (`joinplan.js`) and the .rdl builder (`rdl.js`) |
+| `web/` | The page (`index.html`), search (`search.js`), column descriptions (`columns.js`), the join planner (`joinplan.js`) and the .rdl builder (`rdl.js`) |
 | `data/schema.json` | Schema export from the lab site |
 | `extractor/` | The PowerShell schema exporter |
 | `tools/` | Offline build script and tests |
