@@ -1,5 +1,7 @@
 # v_Where
 
+[![Tests](https://github.com/JBoogieman/v-where/actions/workflows/tests.yml/badge.svg)](https://github.com/JBoogieman/v-where/actions/workflows/tests.yml)
+
 **Where is that data in ConfigMgr?** Search Microsoft Configuration Manager's SQL views in plain words, pick the columns you need, and get a working query or a ConfigMgr-ready SSRS report. No SQL required.
 
 **[Open v_Where](https://jboogieman.github.io/v-where/)** · [User guide](docs/user-guide.md) · [Executive summary](docs/executive-summary.md) · [Roadmap](https://github.com/JBoogieman/v-where/milestones)
@@ -32,7 +34,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
 | Use your own site's schema | Run `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
 | Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
-| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js` and `node tools/test_rdl.js` |
+| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js` and `node tools/test_rdl.js`. They also run on every push and pull request. |
 
 ## Docs
 
@@ -42,6 +44,8 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | [Executive summary](docs/executive-summary.md) | What it is, how it's built, where it stands |
 | [How the connections work](docs/how-connections-work.md) | What happens when you add columns from several views |
 | [Lab build](docs/lab-build.md) | The Proxmox lab the bundled schema comes from |
+| [Contributing](CONTRIBUTING.md) | Reporting a search miss or a bug, running the tests, sending a change |
+| [Changelog](CHANGELOG.md) | What changed in each version |
 
 ## Project layout
 
@@ -56,11 +60,15 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 
 ## Status
 
-Work in progress. Planned work is tracked as [milestones](https://github.com/JBoogieman/v-where/milestones) and [issues](https://github.com/JBoogieman/v-where/issues).
+Version 0.1.0: see the [changelog](CHANGELOG.md). Planned work is tracked as [milestones](https://github.com/JBoogieman/v-where/milestones) and [issues](https://github.com/JBoogieman/v-where/issues).
 
 ## Data policy
 
 All schema data comes from a lab ConfigMgr site built for this project. No production data, hostnames or organization details belong in this repo.
+
+## Acknowledgment
+
+Every project begins with a thought. AI was used to help bring this vision to life.
 
 ## License
 
