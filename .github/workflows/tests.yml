@@ -29,6 +29,9 @@ jobs:
       - name: Report (.rdl) tests
         run: node tools/test_rdl.js
 
+      - name: Schema file tools tests
+        run: python3 tools/test_schema_tools.py
+
       - name: Offline build
         run: |
           python3 tools/build_offline.py --out dist/v_where.html
