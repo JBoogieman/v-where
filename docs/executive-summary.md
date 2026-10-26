@@ -32,7 +32,9 @@ flowchart LR
 | --- | --- | --- |
 | Extractor (`extractor/`) | Reads view and function names, columns, types and hardware inventory class definitions. Schema only: never reads device or user data. | ~230 lines PowerShell |
 | Schema data (`data/`) | Export from the lab site: 841 views, 625 permission-filtered `fn_rbac_` functions, 311 inventory views (140 not collected by default) | ~1 MB JSON |
-| Search page (`web/index.html`) | Plain-word synonyms, ranked results, category filters, "not collected by default" flags, links to `fn_rbac_` versions, shareable links, hover help and a How it works panel | ~1,100 lines |
+| Search page (`web/index.html`) | Results, category filters, "not collected by default" and history flags, links to `fn_rbac_` versions, shareable links, hover help, a How it works panel, phone layout | ~870 lines |
+| Search (`web/search.js`) | Translates everyday words into ConfigMgr names, ranks views, keeps only columns that match the whole search, highlights whole words | ~370 lines, 26 tests |
+| Column descriptions (`web/columns.js`) | One-line, plain-English descriptions for about 160 of the most-used columns | ~220 lines, 4 tests |
 | Join planner (`web/joinplan.js`) | Builds one query around the device list, adds link tables for users, updates and collections, warns when a view repeats devices, converts codes and units to readable values, and explains each connection in plain English | ~400 lines, 32 tests |
 | Report builder (`web/rdl.js`) | Turns a draft into an RDL 2008/01 report: shared data source, permission parameters, collection picker, sortable table | ~225 lines, 10 tests |
 | Delivery | GitHub Pages site and a single-file offline build (`tools/build_offline.py`) | ~1 MB HTML |
@@ -44,19 +46,18 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 | Area | Status |
 | --- | --- |
 | Lab | Built: Proxmox host, domain controller, ConfigMgr current branch on SQL Server 2022, Windows 11 client |
-| Search | Working against the lab export |
+| Search | Working against the lab export; tested against common searches |
 | Join planner | Working; unit tested |
 | .rdl output | Working; checked against Microsoft's RDL schema |
-| In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft |
+| In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft, column descriptions |
 | Hosting | Live on GitHub Pages; offline build available |
 
 **Data policy:** all schema data comes from a lab site. No production data, hostnames or organization details are in the repo.
 
 ## Known limits
 
-- **Search noise.** Multi-word synonyms can highlight loosely related columns.
-- **No column descriptions.** Results show names and types, not what a column means.
-- **History views** (`v_HS_`) appear alongside current views (`v_GS_`) without guidance on which to use.
+- **Hand-tuned search.** Synonyms and ranking rules are written by hand and tested against common searches; unusual wording can still miss.
+- **Column descriptions cover the common columns only:** about 160 of 22,457. The rest show name and type.
 - **Join planner shape.** It joins everything around the device list and can't follow longer chains (deployment to assignment to collection). It infers keys from column names because ConfigMgr views declare no relationships.
 - **Locked-down PowerShell.** The extractor uses .NET SQL classes, which Constrained Language Mode blocks; those environments need a signed copy or another export path.
 - **One schema.** The bundled data reflects one lab site and version. Custom inventory classes need your own export.

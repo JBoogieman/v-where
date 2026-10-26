@@ -12,11 +12,13 @@ New to ConfigMgr's tables? Click **How it works** at the top of the page for the
 
 **Read a result.** Each card on the left is one view (a read-only table):
 
-- **Line 1:** the view name. An orange **not collected by default** tag means the view exists but stays empty until someone turns that inventory class on in Client Settings.
+- **Line 1:** the view name. An orange **not collected by default** tag means the view exists but stays empty until someone turns that inventory class on in Client Settings. A **history** tag means it holds earlier values (see below).
 - **Line 2:** its area (Hardware inventory, Discovery...), how many columns it has, whether it has a permission-filtered `fn_rbac_` version, and the Windows (WMI) class the data comes from.
 - **Line 3:** the columns that matched your search, highlighted.
 
 The view name tells you where the data comes from: `v_GS_` is the latest hardware inventory (usually what you want), `v_HS_` is inventory history, `v_R_` is discovery, `v_CH_` is client health. The trailing `0` in names like `LastBootUpTime0` means nothing; ignore it.
+
+**History views** (`v_HS_`) keep a row each time inventory sees a change, so devices repeat. They're for "what changed and when". They rank below their current `v_GS_` view, and opening one links to it.
 
 **Narrow it down.** The category chips filter by area. **Show fn_rbac_ functions** adds the permission-filtered versions to the list; most searches don't need them.
 
@@ -24,10 +26,12 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 
 - where its data comes from and whether ConfigMgr collects it by default;
 - **Copy name** and **Copy SELECT** (a ready-to-run query for this view on its own);
-- every column, with matches highlighted and **+** to add one to your report;
+- every column, with the ones matching your search listed first and highlighted, a one-line description under the common ones, and **+** to add one to your report;
 - **Related views:** other views sharing an ID column with this one.
 
 **Shortcuts:** `/` jumps to the search box; `↑` `↓` move through results; `Enter` opens the first one. The address bar updates as you search, so you can send someone a link to the same result.
+
+**On a phone,** the results and the view you open stack on one page. Tap a result to jump to it, and **← Results** to go back.
 
 ## 2. Build a report
 
