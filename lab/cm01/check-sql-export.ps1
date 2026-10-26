@@ -65,10 +65,10 @@ function Get-Shape($o) {
     }
 }
 try {
-    $a = Get-Content schema-ps.json -Raw -Encoding UTF8 | ConvertFrom-Json
+    $a = (Get-Content schema-ps.json -Raw -Encoding UTF8) -replace '[\r\n]', '' | ConvertFrom-Json
 } catch { throw "schema-ps.json isn't valid JSON: $_" }
 try {
-    $b = Get-Content schema-sql.json -Raw -Encoding UTF8 | ConvertFrom-Json
+    $b = (Get-Content schema-sql.json -Raw -Encoding UTF8) -replace '[\r\n]', '' | ConvertFrom-Json   # sqlcmd breaks long output into lines
 } catch { throw "schema-sql.json isn't valid JSON: $_" }
 
 $diffs = 0
