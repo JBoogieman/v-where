@@ -71,3 +71,4 @@ These cost real time. Writing them down so they don't again.
 
 - Grant `LAB\Domain Admins` the Full Administrator role in ConfigMgr.
 - Confirm the site database (`CM_LAB`) contains the `v_` views v_Where reads.
+- After a ConfigMgr upgrade, or a change to either exporter, run [`lab/cm01/check-sql-export.ps1`](../lab/cm01/check-sql-export.ps1) on CM01. It runs the T-SQL and PowerShell exports and should end with "Same schema."

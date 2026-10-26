@@ -32,9 +32,9 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | To | Do this |
 | --- | --- |
 | Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
-| Use your own site's schema | Run `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
+| Use your own site's schema | Run `extractor/Export-VWhereSchema.sql` with sqlcmd (works where PowerShell is locked down) or `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
 | Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
-| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js` and `node tools/test_rdl.js`. They also run on every push and pull request. |
+| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js`, `node tools/test_rdl.js` and `python3 tools/test_schema_tools.py`. They also run on every push and pull request. |
 
 ## Docs
 
@@ -53,7 +53,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | --- | --- |
 | `web/` | The page (`index.html`), search (`search.js`), column descriptions (`columns.js`), the join planner (`joinplan.js`) and the .rdl builder (`rdl.js`) |
 | `data/schema.json` | Schema export from the lab site |
-| `extractor/` | The PowerShell schema exporter |
+| `extractor/` | The schema exporter: T-SQL for sqlcmd, or PowerShell |
 | `tools/` | Offline build script and tests |
 | `lab/` | Scripts and config used to build the lab |
 | `docs/` | Documentation |

@@ -1,6 +1,6 @@
 # Contributing to v_Where
 
-Thanks for helping. v_Where is small on purpose: a static page, three plain JavaScript modules, a PowerShell exporter and a few tests. No frameworks, no build step, nothing to install.
+Thanks for helping. v_Where is small on purpose: a static page, a few plain JavaScript modules, a schema exporter (T-SQL or PowerShell) and tests. No frameworks, no build step, nothing to install.
 
 ## Ways to help
 
@@ -31,6 +31,7 @@ You'll need Node.js (any current LTS) for the tests and Python 3 for the offline
 node tools/test_search.js
 node tools/test_joinplan.js      # add --show to print each generated query
 node tools/test_rdl.js
+python3 tools/test_schema_tools.py   # the offline build and compare tool, including sqlcmd-style files
 ```
 
 They also run on every push and pull request, and the site only deploys when they pass. A change in behavior comes with a test.
@@ -45,6 +46,7 @@ They also run on every push and pull request, and the site only deploys when the
 | How views are joined, link tables, one-row views | `BRIDGES`, `ONE_ROW`, `PICK_ONE` in `web/joinplan.js` | `tools/test_joinplan.js` |
 | Readable values | `FORMATS` in `web/joinplan.js` | `tools/test_joinplan.js` |
 | The `.rdl` report | `web/rdl.js` | `tools/test_rdl.js` |
+| The schema export | `extractor/Export-VWhereSchema.sql` and `.ps1` | `lab/cm01/check-sql-export.ps1` on a site server: runs both and compares them |
 | The page, help text and hover tips | `web/index.html` | Open the page and try it |
 
 [How the connections work](docs/how-connections-work.md) explains the join planner in detail.

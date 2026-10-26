@@ -30,7 +30,7 @@ flowchart LR
 
 | Component | What it does | Size |
 | --- | --- | --- |
-| Extractor (`extractor/`) | Reads view and function names, columns, types and hardware inventory class definitions. Schema only: never reads device or user data. | ~230 lines PowerShell |
+| Extractor (`extractor/`) | Reads view and function names, columns, types and hardware inventory class definitions. Schema only: never reads device or user data. | ~230 lines PowerShell, or ~170 lines of T-SQL run with sqlcmd (no PowerShell needed) |
 | Schema data (`data/`) | Export from the lab site: 841 views, 625 permission-filtered `fn_rbac_` functions, 311 inventory views (140 not collected by default) | ~1 MB JSON |
 | Search page (`web/index.html`) | Results, category filters, "not collected by default" and history flags, links to `fn_rbac_` versions, shareable links, hover help, a How it works panel, phone layout | ~870 lines |
 | Search (`web/search.js`) | Translates everyday words into ConfigMgr names, ranks views, keeps only columns that match the whole search, highlights whole words | ~370 lines, 26 tests |
@@ -50,7 +50,7 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 | Join planner | Working; unit tested |
 | .rdl output | Working; checked against Microsoft's RDL schema |
 | In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft, column descriptions |
-| Tests | 72 tests (search, join planner, .rdl) run on every push and pull request; the site only deploys if they pass |
+| Tests | 76 tests (search, join planner, .rdl, schema file tools) run on every push and pull request; the site only deploys if they pass. The T-SQL exporter is checked against the PowerShell one on the lab site |
 | Hosting | Live on GitHub Pages; offline build available |
 
 **Data policy:** all schema data comes from a lab site. No production data, hostnames or organization details are in the repo.
@@ -60,7 +60,6 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 - **Hand-tuned search.** Synonyms and ranking rules are written by hand and tested against common searches; unusual wording can still miss.
 - **Column descriptions cover the common columns only:** about 160 of 22,457. The rest show name and type.
 - **Join planner shape.** It joins everything around the device list and can't follow longer chains (deployment to assignment to collection). It infers keys from column names because ConfigMgr views declare no relationships.
-- **Locked-down PowerShell.** The extractor uses .NET SQL classes, which Constrained Language Mode blocks; those environments need a signed copy or another export path.
 - **One schema.** The bundled data reflects one lab site and version. Custom inventory classes need your own export.
 
 ## Roadmap

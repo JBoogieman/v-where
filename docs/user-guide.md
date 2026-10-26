@@ -77,16 +77,28 @@ If it fails with a permission error on `fn_rbac_GetAdminIDsfromUserSIDs`, the ac
 
 ## 4. Use your own site's schema
 
-The bundled schema comes from a lab site. Your site may have custom hardware inventory classes, or a newer ConfigMgr version, that it doesn't know about. Export your own:
+The bundled schema comes from a lab site. Your site may have custom hardware inventory classes, or a newer ConfigMgr version, that it doesn't know about. Export your own, either way:
+
+**With sqlcmd (no PowerShell, so it works where PowerShell is locked down to Constrained Language Mode):**
+
+```
+sqlcmd -S <sql-server> -d CM_<site code> -E -I -b -f o:65001 -i extractor\Export-VWhereSchema.sql -o schema.json
+```
+
+sqlcmd comes with SQL Server's command line tools, so it's already on the site database server. Use sqlcmd rather than SSMS: SSMS cuts long text results off, which breaks the file. sqlcmd starts a new line every 2,000 or so characters, even mid-word; that's expected, and v_Where reads the file fine.
+
+**With PowerShell:**
 
 ```powershell
 .\extractor\Export-VWhereSchema.ps1 -SqlServer <sql-server> -Database CM_<site code> -OutFile .\schema.json
 ```
 
+Either way:
+
 - It reads names and types only (SQL Server's system catalog and the inventory class definitions). It never reads device, user or inventory data.
 - It uses Windows authentication, so run it as an account that can already read the site database.
-- `-SchemaOnly` skips the inventory class definitions (and with them the "not collected by default" flags).
-- It uses .NET SQL classes, so it won't run in PowerShell Constrained Language Mode without signing ([#15](https://github.com/JBoogieman/v-where/issues/15)).
+- To skip the inventory class definitions (and with them the "not collected by default" flags), use `-SchemaOnly` in PowerShell, or set `@SchemaOnly = 1` at the top of the .sql file.
+- `python3 tools/compare_schema.py data/schema.json schema.json` shows what's different about your site: views and columns only one has, and inventory classes collected differently.
 
 Then use it one of two ways:
 
