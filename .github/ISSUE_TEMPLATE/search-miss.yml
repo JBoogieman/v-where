@@ -1,0 +1,35 @@
+name: Search didn't find it
+description: You searched for something and the right view or column didn't come up, or came up too low.
+title: "Search: "
+labels: [search]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These reports tune v_Where's synonyms and ranking. If you know the right view and column, say so: it can become a test.
+
+        **No production data, please.** Leave out real device names, hostnames, usernames and anything that identifies your organization.
+  - type: input
+    id: searched
+    attributes:
+      label: What you searched for
+      placeholder: e.g. last reboot
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: What you expected to find
+      description: The view and column, if you know them.
+      placeholder: e.g. v_GS_OPERATING_SYSTEM.LastBootUpTime0
+  - type: textarea
+    id: got
+    attributes:
+      label: What came up instead
+      description: The first few results, or "nothing".
+  - type: input
+    id: version
+    attributes:
+      label: ConfigMgr version (optional)
+      description: Only if you used your own schema export.
+      placeholder: e.g. 2409

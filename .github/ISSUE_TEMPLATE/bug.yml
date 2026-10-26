@@ -1,0 +1,46 @@
+name: Bug
+description: Something on the page, in the SQL or in a downloaded report is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **No production data, please.** Leave out real device names, hostnames, usernames and anything that identifies your organization. Swap them for placeholders.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Search results
+        - Report draft or SQL
+        - Downloaded .rdl report
+        - Offline file
+        - Schema exporter (PowerShell)
+        - Docs
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the error message, if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to see it
+      placeholder: |
+        1. Search for ...
+        2. Add ... to the report draft
+        3. ...
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: browser
+    attributes:
+      label: Browser, or SSRS / ConfigMgr version
+      placeholder: e.g. Edge 130, or SSRS 2022 with ConfigMgr 2409
