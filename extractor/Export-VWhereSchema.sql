@@ -12,18 +12,18 @@
 
   Run it with sqlcmd, as an account that can already read the site database:
 
-    sqlcmd -S <sql-server> -d CM_<site code> -E -I -b -h -1 -y 0 -f o:65001 -i Export-VWhereSchema.sql -o schema.json
+    sqlcmd -S <sql-server> -d CM_<site code> -E -I -b -f o:65001 -i Export-VWhereSchema.sql -o schema.json
 
     -E          Windows authentication
     -I          QUOTED_IDENTIFIER on (the XML string building below needs it)
     -b          stop with an error code if anything fails
-    -h -1       no column header
-    -y 0        don't cut long values off at 256 characters
     -f o:65001  write UTF-8
 
-  The output is one JSON line per view. Use sqlcmd rather than SSMS: SSMS cuts
-  long text results off at 8,192 characters, which breaks views with many columns.
+  The XML ON line below makes sqlcmd write the JSON as-is: no column header, no
+  padding, nothing cut off. Use sqlcmd rather than SSMS, which cuts long results off.
+  The output has one line per view, so diffs between exports stay readable.
 */
+:XML ON
 SET NOCOUNT ON;
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
@@ -123,56 +123,56 @@ SELECT @columns = COUNT(*) FROM #col;
 SELECT @aliases = COUNT(*) FROM #syn;
 SELECT @inventoryViews = COUNT(*) FROM #hinv;
 
--- One line for the header, one per view or function, one to close
-SELECT line FROM (
-  SELECT 0 AS part, CAST(N'' AS nvarchar(256)) AS name,
-         N'{"schemaVersion":2,"generatedUtc":"' + LEFT(CONVERT(varchar(30), SYSUTCDATETIME(), 126), 19) + N'Z"'
-       + N',"sqlVersion":"' + CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(64)) + N'"'
-       + N',"counts":{"views":' + CAST(@views AS nvarchar(10)) + N',"functions":' + CAST(@functions AS nvarchar(10))
-       + N',"columns":' + CAST(@columns AS nvarchar(10)) + N',"aliases":' + CAST(@aliases AS nvarchar(10))
-       + N',"inventoryViews":' + CAST(@inventoryViews AS nvarchar(10)) + N'},"objects":[' AS line
-
-  UNION ALL
-
-  SELECT 1, o.name,
+-- All objects, one per line, sorted by name
+DECLARE @objects nvarchar(max) = (
+  SELECT CASE WHEN x.n = 1 THEN N'' ELSE N',' + NCHAR(10) END + x.line
+  FROM (
+    SELECT ROW_NUMBER() OVER (ORDER BY o.name) AS n,
          N'{"name":"' + STRING_ESCAPE(o.name, 'json') + N'","kind":"' + o.kind + N'"'
-       -- columns: [name, type, nullable]
-       + N',"columns":[' + STUFF((
-           SELECT N',["' + STRING_ESCAPE(c.name, 'json') + N'","' + STRING_ESCAPE(c.dtype, 'json') + N'",'
-                + CASE WHEN c.is_nullable = 1 THEN N'true' ELSE N'false' END + N']'
-           FROM #col c WHERE c.object_id = o.object_id ORDER BY c.column_id
-           FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']'
-       -- params: [name, type]
-       + ISNULL(N',"params":[' + STUFF((
-           SELECT N',["' + STRING_ESCAPE(p.name, 'json') + N'","' + STRING_ESCAPE(p.dtype, 'json') + N'"]'
-           FROM #par p WHERE p.object_id = o.object_id ORDER BY p.parameter_id
-           FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
-       + ISNULL(N',"aliases":[' + STUFF((
-           SELECT N',"' + STRING_ESCAPE(s.alias, 'json') + N'"'
-           FROM #syn s WHERE s.target = o.name ORDER BY s.alias
-           FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
-       -- fn_rbac_X wraps v_X
-       + CASE WHEN o.kind = 'function' AND b.name IS NOT NULL THEN N',"baseView":"' + STRING_ESCAPE(b.name, 'json') + N'"' ELSE N'' END
-       -- hardware inventory class; the namespace is stored MOF-escaped: \\\\.\\root\\cimv2 -> root\cimv2
-       + ISNULL(N',"hinv":{"display":"' + STRING_ESCAPE(h.display, 'json') + N'"'
-           + ISNULL(N',"class":"' + STRING_ESCAPE(h.wmiClass, 'json') + N'","namespace":"' + STRING_ESCAPE(ns.v, 'json') + N'"', N'')
-           + N',"collected":' + CASE WHEN h.collected = 1 THEN N'true' ELSE N'false' END + N'}', N'')
-       + ISNULL(N',"offColumns":[' + STUFF((
-           SELECT N',"' + STRING_ESCAPE(f.col, 'json') + N'"'
-           FROM #off f
-           WHERE f.gsView = h.gsView AND EXISTS (SELECT 1 FROM #col c WHERE c.object_id = o.object_id AND c.name = f.col)
-           ORDER BY f.col
-           FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
-       + N'}'
-       + CASE WHEN ROW_NUMBER() OVER (ORDER BY o.name DESC) = 1 THEN N'' ELSE N',' END
+         -- columns: [name, type, nullable]
+         + N',"columns":[' + STUFF((
+             SELECT N',["' + STRING_ESCAPE(c.name, 'json') + N'","' + STRING_ESCAPE(c.dtype, 'json') + N'",'
+                  + CASE WHEN c.is_nullable = 1 THEN N'true' ELSE N'false' END + N']'
+             FROM #col c WHERE c.object_id = o.object_id ORDER BY c.column_id
+             FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']'
+         -- params: [name, type]
+         + ISNULL(N',"params":[' + STUFF((
+             SELECT N',["' + STRING_ESCAPE(p.name, 'json') + N'","' + STRING_ESCAPE(p.dtype, 'json') + N'"]'
+             FROM #par p WHERE p.object_id = o.object_id ORDER BY p.parameter_id
+             FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
+         + ISNULL(N',"aliases":[' + STUFF((
+             SELECT N',"' + STRING_ESCAPE(s.alias, 'json') + N'"'
+             FROM #syn s WHERE s.target = o.name ORDER BY s.alias
+             FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
+         -- fn_rbac_X wraps v_X
+         + CASE WHEN o.kind = 'function' AND b.name IS NOT NULL THEN N',"baseView":"' + STRING_ESCAPE(b.name, 'json') + N'"' ELSE N'' END
+         -- hardware inventory class; the namespace is stored MOF-escaped: \\\\.\\root\\cimv2 -> root\cimv2
+         + ISNULL(N',"hinv":{"display":"' + STRING_ESCAPE(h.display, 'json') + N'"'
+             + ISNULL(N',"class":"' + STRING_ESCAPE(h.wmiClass, 'json') + N'","namespace":"' + STRING_ESCAPE(ns.v, 'json') + N'"', N'')
+             + N',"collected":' + CASE WHEN h.collected = 1 THEN N'true' ELSE N'false' END + N'}', N'')
+         + ISNULL(N',"offColumns":[' + STUFF((
+             SELECT N',"' + STRING_ESCAPE(f.col, 'json') + N'"'
+             FROM #off f
+             WHERE f.gsView = h.gsView AND EXISTS (SELECT 1 FROM #col c WHERE c.object_id = o.object_id AND c.name = f.col)
+             ORDER BY f.col
+             FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 1, N'') + N']', N'')
+         + N'}' AS line
   FROM #obj o
-  LEFT JOIN #obj b ON o.kind = 'function' AND b.kind = 'view' AND b.name = N'v_' + SUBSTRING(o.name, 9, 256)
-  LEFT JOIN #hinv h ON h.viewName = o.name
-  OUTER APPLY (SELECT REPLACE(ISNULL(h.wmiNamespace, N''), N'\\', N'\') AS r) r
-  OUTER APPLY (SELECT CASE WHEN LEFT(r.r, 4) = N'\\.\' THEN SUBSTRING(r.r, 5, 1024) ELSE r.r END AS v) ns
+    LEFT JOIN #obj b ON o.kind = 'function' AND b.kind = 'view' AND b.name = N'v_' + SUBSTRING(o.name, 9, 256)
+    LEFT JOIN #hinv h ON h.viewName = o.name
+    OUTER APPLY (SELECT REPLACE(ISNULL(h.wmiNamespace, N''), N'\\', N'\') AS r) r
+    OUTER APPLY (SELECT CASE WHEN LEFT(r.r, 4) = N'\\.\' THEN SUBSTRING(r.r, 5, 1024) ELSE r.r END AS v) ns
+  
+  ) x
+  ORDER BY x.n
+  FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)');
 
-  UNION ALL
-
-  SELECT 2, N'', N']}'
-) x
-ORDER BY part, name;
+-- The file: header fields, counts, then the objects. JSON_QUERY passes the objects through as-is
+-- (and fails loudly if they aren't valid JSON).
+SELECT 2 AS schemaVersion,
+       LEFT(CONVERT(varchar(30), SYSUTCDATETIME(), 126), 19) + 'Z' AS generatedUtc,
+       CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(64)) AS sqlVersion,
+       @views AS [counts.views], @functions AS [counts.functions], @columns AS [counts.columns],
+       @aliases AS [counts.aliases], @inventoryViews AS [counts.inventoryViews],
+       JSON_QUERY(N'[' + NCHAR(10) + @objects + NCHAR(10) + N']') AS objects
+FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
