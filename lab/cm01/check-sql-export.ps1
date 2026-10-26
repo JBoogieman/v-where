@@ -39,7 +39,7 @@ if (-not (Test-Path $sql) -or -not (Test-Path $ps1)) {
 
 # 2. T-SQL export with sqlcmd (the command from the user guide)
 $t = Get-Date
-& sqlcmd -S $SqlServer -d $Database -E -I -b -h -1 -y 0 -f o:65001 -i $sql -o schema-sql.json
+& sqlcmd -S $SqlServer -d $Database -E -I -b -f o:65001 -i $sql -o schema-sql.json
 if ($LASTEXITCODE) {
     Get-Content schema-sql.json -TotalCount 15
     throw "sqlcmd failed with exit code $LASTEXITCODE (its messages are above)"
