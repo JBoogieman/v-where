@@ -182,4 +182,4 @@ FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
 -- padding or line breaks added. & < > would be XML-escaped, so they're written as JSON's own
 -- escapes first (they can only appear inside JSON strings, where \u0026 means the same thing).
 SET @json = REPLACE(REPLACE(REPLACE(@json, N'&', N'\u0026'), N'<', N'\u003c'), N'>', N'\u003e');
-SELECT @json FOR XML PATH('');
+SELECT @json AS [XML_F52E2B61-18A1-11d1-B105-00805F49916B];   -- the column name sqlcmd's XML mode looks for
