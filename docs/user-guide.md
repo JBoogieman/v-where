@@ -82,10 +82,10 @@ The bundled schema comes from a lab site. Your site may have custom hardware inv
 **With sqlcmd (no PowerShell, so it works where PowerShell is locked down to Constrained Language Mode):**
 
 ```
-sqlcmd -S <sql-server> -d CM_<site code> -E -I -b -h -1 -y 0 -f o:65001 -i extractor\Export-VWhereSchema.sql -o schema.json
+sqlcmd -S <sql-server> -d CM_<site code> -E -I -b -f o:65001 -i extractor\Export-VWhereSchema.sql -o schema.json
 ```
 
-sqlcmd comes with SQL Server's command line tools, so it's already on the site database server. Use sqlcmd rather than SSMS: SSMS cuts long text results off, which breaks the file.
+sqlcmd comes with SQL Server's command line tools, so it's already on the site database server. Use sqlcmd rather than SSMS: SSMS cuts long text results off, which breaks the file. sqlcmd starts a new line every 2,000 or so characters, even mid-word; that's expected, and v_Where reads the file fine.
 
 **With PowerShell:**
 
