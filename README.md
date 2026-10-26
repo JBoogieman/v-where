@@ -1,72 +1,66 @@
 # v_Where
 
-**Where is that data in ConfigMgr?** v_Where is a searchable reference for Microsoft Configuration Manager (MECM/SCCM) SQL views. Type a word or phrase (e.g. `bitlocker`, `last logon`, `install date`) and see which views and columns hold it, so writing SSRS reports and SQL queries starts with an answer instead of a guess.
+**Where is that data in ConfigMgr?** Search Microsoft Configuration Manager's SQL views in plain words, pick the columns you need, and get a working query or a ConfigMgr-ready SSRS report. No SQL required.
 
-> **Status:** work in progress. Lab is built; the search page works against the lab export (841 views, 625 `fn_rbac_` functions).
+**[Open v_Where](https://jboogieman.github.io/v-where/)** · [User guide](docs/user-guide.md) · [Executive summary](docs/executive-summary.md) · [Roadmap](https://github.com/JBoogieman/v-where/milestones)
 
-**Live:** https://jboogieman.github.io/v-where/
+![Report draft: columns from three views, with a plain-English list of how the tables are connected](docs/screenshot-report-draft.png)
 
 ## How it works
 
-- **Extractor** ([`extractor/Export-VWhereSchema.ps1`](extractor/Export-VWhereSchema.ps1)): a PowerShell script that reads a ConfigMgr site database's *schema* (view and `fn_rbac_` function names, columns, data types) plus its hardware inventory class definitions, and writes them to JSON. Windows authentication, read-only, never reads device or user data. `-SchemaOnly` skips the class definitions.
-- **Data** ([`data/schema.json`](data/schema.json)): the export from the lab site.
-- **Search page** ([`web/index.html`](web/index.html)): one static HTML/JS file that searches that JSON. No server-side code, no database, no install.
-- **Join planner** ([`web/joinplan.js`](web/joinplan.js)): turns a set of picked columns into one query. `v_R_System` sits in the middle; device views join on `ResourceID`/`MachineID`, and users, updates and collections join through a bridge view (`v_UsersPrimaryMachines`, `v_UpdateComplianceStatus`, `v_FullCollectionMembership`). Tests: `node tools/test_joinplan.js` (add `--show` to print the queries).
-- **Report builder** ([`web/rdl.js`](web/rdl.js)): turns a report draft into an SSRS report definition (`.rdl`) shaped like ConfigMgr's built-in reports: the site's shared data source, the hidden `UserTokenSIDs`/`UserSIDs` parameters so `fn_rbac_` functions respect console permissions, a collection picker, and a table with sortable headers. Tests: `node tools/test_rdl.js`.
+1. **Search in plain words:** `ram`, `last boot`, `bitlocker`, `primary user`. Everyday words are translated into ConfigMgr's names, and results list the views (tables) that hold the data, with the matching columns highlighted.
+2. **Click + on the columns you want,** from as many views as you need.
+3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, and gives you the SQL or a ConfigMgr-ready `.rdl` report.
 
-### Try it
+Hover over anything on the page for a short explanation, or open **How it works** for a glossary.
 
-From the repo root, serve the folder with any static web server and open `/web/`:
+## What it knows
 
-```sh
-python3 -m http.server 8000
-# then browse to http://localhost:8000/web/
-```
+- **841 views, 625 permission-filtered `fn_rbac_` functions and 22,457 columns** from a ConfigMgr current branch lab site.
+- **Which hardware inventory classes and columns aren't collected by default:** the view exists but stays empty until someone turns them on in Client Settings.
+- **The Windows (WMI) class behind each inventory view,** and each view's `fn_rbac_` version for SSRS reports.
 
-Opening `web/index.html` straight from disk also works: browsers block it from loading the JSON on their own, so the page asks you to pick or drop a `schema.json`. To point it at a different export, add `?data=<url>`.
+## What it touches
 
-### Offline copy
+Nothing in your environment. v_Where is a static web page: it searches a file of view and column names, with no device or user data in it, and never connects to a ConfigMgr database. The SQL and reports it writes only read data, and only when someone runs them.
 
-Build one self-contained file with the schema baked in:
+## Run it yourself
 
-```sh
-python3 tools/build_offline.py
-# -> dist/v_where.html (about 1 MB)
-```
+| To | Do this |
+| --- | --- |
+| Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
+| Use your own site's schema | Run `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
+| Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
+| Run the tests | `node tools/test_joinplan.js` and `node tools/test_rdl.js` |
 
-Copy `dist/v_where.html` anywhere and double-click it. No server, network, or install needed. Rebuild after the page or the schema changes. Use `--schema` and `--out` to bake in a different export.
+## Docs
 
-- Type words or a phrase (`last logon`, `install date`); results rank views whose names or columns match at word boundaries highest.
-- Everyday words are translated into ConfigMgr's names: `ram` → physical memory, `uptime` → LastBootUpTime, `primary user` → user machine relationship, `kb` → ArticleID. The list lives in `SYNONYMS` at the top of the page's script.
-- Hardware inventory views show the WMI class behind them, and flag classes and columns that Default Client Settings doesn't collect (the view exists but stays empty until you enable them).
-- Category chips filter by area (Discovery, Hardware inventory, Software updates...).
-- Each view links to its `fn_rbac_` twin for RBAC-filtered SSRS reports, and **Copy SELECT** builds a query from the columns you matched.
-- **Report draft:** click **+** next to columns in any views, then open **Report draft**. v_Where writes the joins, warns when a view repeats devices (one row per drive, per adapter...) with a one-click fix, filters to one collection with `@CollectionID`, and can switch everything to `fn_rbac_` functions with `@UserSIDs` for SSRS. Rename columns to set report headers. The draft stays in your browser between visits.
-- **Readable values** (on by default): memory in GB instead of KB, BitLocker protection as On/Off, chassis types as Laptop/Desktop..., update compliance as Installed/Required, client flags as Yes/No, and the two "Unknown Computer" placeholder records left out. The conversions live in `FORMATS` in `web/joinplan.js`. Disk sizes are deliberately left raw: ConfigMgr has stored them in MB or GB depending on version, so a fixed conversion could be wrong.
-- **Download .rdl:** enter a report name and your site code, and the draft downloads as a ConfigMgr-ready report. Upload it to the `ConfigMgr_<site>` folder (or a subfolder) in the SSRS web portal, or open it in Report Builder and save it there; it then shows up in the console under **Monitoring > Reporting > Reports**. The layout is deliberately plain (title, collection and row count, one table), so the only work left is formatting.
-- The URL updates as you search, so a link takes someone straight to the same result.
+| Doc | For |
+| --- | --- |
+| [User guide](docs/user-guide.md) | Finding data, building a report, putting it in ConfigMgr, using your own schema |
+| [Executive summary](docs/executive-summary.md) | What it is, how it's built, where it stands |
+| [How the connections work](docs/how-connections-work.md) | What happens when you add columns from several views |
+| [Lab build](docs/lab-build.md) | The Proxmox lab the bundled schema comes from |
 
-### Use your own site's schema
+## Project layout
 
-Run the extractor against your site to include your custom hardware inventory classes:
+| Path | What's there |
+| --- | --- |
+| `web/` | The page (`index.html`), the join planner (`joinplan.js`) and the .rdl builder (`rdl.js`) |
+| `data/schema.json` | Schema export from the lab site |
+| `extractor/` | The PowerShell schema exporter |
+| `tools/` | Offline build script and tests |
+| `lab/` | Scripts and config used to build the lab |
+| `docs/` | Documentation |
 
-```powershell
-.\Export-VWhereSchema.ps1 -SqlServer <sql-server> -Database CM_<sitecode> -OutFile .\schema.json
-```
+## Status
+
+Work in progress. Planned work is tracked as [milestones](https://github.com/JBoogieman/v-where/milestones) and [issues](https://github.com/JBoogieman/v-where/issues).
 
 ## Data policy
 
-All schema data comes from a **lab** ConfigMgr site built for this project. No production data, hostnames, or organization-specific details belong in this repo.
+All schema data comes from a lab ConfigMgr site built for this project. No production data, hostnames or organization details belong in this repo.
 
-## The lab
+## License
 
-Built on a single Proxmox VE host:
-
-| Machine | Role |
-|---|---|
-| DC01 | Windows Server 2025: AD DS, DNS, DHCP |
-| CM01 | Windows Server 2025: SQL Server 2022 Developer + ConfigMgr current branch (evaluation) |
-| WIN11-01 | Windows 11 Enterprise test client |
-| vwhere-dev | Debian 13 container: development box |
-
-Lab machines live on an isolated, NATed network segment. The full build, scripts, and every gotcha hit along the way are in [docs/lab-build.md](docs/lab-build.md).
+[MIT](LICENSE). v_Where is an independent project and is not affiliated with or endorsed by Microsoft.
