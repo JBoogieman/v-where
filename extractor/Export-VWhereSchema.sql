@@ -19,9 +19,10 @@
     -b          stop with an error code if anything fails
     -f o:65001  write UTF-8
 
-  The XML ON line below, with the FOR XML at the end, makes sqlcmd write the
-  JSON as-is: no column header, no padding, nothing cut off. Use sqlcmd rather than SSMS, which cuts long results off.
-  The output has one line per view, so diffs between exports stay readable.
+  The XML ON line below makes sqlcmd write the JSON without a column header,
+  padding or truncation. It still starts a new line every 2,000 or so characters,
+  even mid-word; v_Where's tools ignore line breaks when they read the file, so
+  that's fine. Use sqlcmd rather than SSMS, which cuts long results off.
 */
 :XML ON
 SET NOCOUNT ON;
@@ -169,17 +170,10 @@ DECLARE @objects nvarchar(max) = (
 
 -- The file: header fields, counts, then the objects. JSON_QUERY passes the objects through as-is
 -- (and fails loudly if they aren't valid JSON).
-DECLARE @json nvarchar(max) = (
 SELECT 2 AS schemaVersion,
        LEFT(CONVERT(varchar(30), SYSUTCDATETIME(), 126), 19) + 'Z' AS generatedUtc,
        CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(64)) AS sqlVersion,
        @views AS [counts.views], @functions AS [counts.functions], @columns AS [counts.columns],
        @aliases AS [counts.aliases], @inventoryViews AS [counts.inventoryViews],
        JSON_QUERY(N'[' + NCHAR(10) + @objects + NCHAR(10) + N']') AS objects
-FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
-
--- Hand it to sqlcmd as an XML stream: in XML mode sqlcmd writes that out whole, with no header,
--- padding or line breaks added. & < > would be XML-escaped, so they're written as JSON's own
--- escapes first (they can only appear inside JSON strings, where \u0026 means the same thing).
-SET @json = REPLACE(REPLACE(REPLACE(@json, N'&', N'\u0026'), N'<', N'\u003c'), N'>', N'\u003e');
-SELECT @json AS [XML_F52E2B61-18A1-11d1-B105-00805F49916B];   -- the column name sqlcmd's XML mode looks for
+FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
