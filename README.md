@@ -34,7 +34,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
 | Use your own site's schema | Run `extractor/Export-VWhereSchema.sql` with sqlcmd (works where PowerShell is locked down) or `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
 | Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
-| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js` and `node tools/test_rdl.js`. They also run on every push and pull request. |
+| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js`, `node tools/test_rdl.js` and `python3 tools/test_schema_tools.py`. They also run on every push and pull request. |
 
 ## Docs
 

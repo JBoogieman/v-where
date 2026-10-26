@@ -6,7 +6,9 @@ What changed in each version of v_Where. Newest first. Version numbers follow [s
 
 - Schema export in plain T-SQL (`extractor/Export-VWhereSchema.sql`), run with sqlcmd. No PowerShell, so it works where PowerShell is locked down to Constrained Language Mode.
 - `tools/compare_schema.py`: compare two schema exports, for example your site against the bundled lab schema, or two ConfigMgr versions.
-- The offline build accepts a schema file saved with a byte order mark.
+- The page, the offline build and the compare tool read schema files the way sqlcmd writes them: a byte order mark, and a line break every 2,000 or so characters.
+- `lab/cm01/check-sql-export.ps1`: runs the T-SQL and PowerShell exports on a site server and compares them. On the lab site they match exactly.
+- Tests for the offline build and compare tool (`tools/test_schema_tools.py`), run with the others on every push.
 
 ## 0.1.0 (2026-10-25)
 
