@@ -50,7 +50,7 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 | Join planner | Working; unit tested |
 | .rdl output | Working; checked against Microsoft's RDL schema |
 | In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft, column descriptions |
-| Tests | 72 tests (search, join planner, .rdl) run on every push and pull request; the site only deploys if they pass |
+| Tests | 76 tests (search, join planner, .rdl, schema file tools) run on every push and pull request; the site only deploys if they pass. The T-SQL exporter is checked against the PowerShell one on the lab site |
 | Hosting | Live on GitHub Pages; offline build available |
 
 **Data policy:** all schema data comes from a lab site. No production data, hostnames or organization details are in the repo.
