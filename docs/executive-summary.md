@@ -1,6 +1,6 @@
 # v_Where: Executive Summary
 
-*Status as of October 2026 · Work in progress · MIT license*
+*Version 0.1.0 · October 2026 · MIT license*
 
 ## The problem
 
@@ -50,6 +50,7 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 | Join planner | Working; unit tested |
 | .rdl output | Working; checked against Microsoft's RDL schema |
 | In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft, column descriptions |
+| Tests | 72 tests (search, join planner, .rdl) run on every push and pull request; the site only deploys if they pass |
 | Hosting | Live on GitHub Pages; offline build available |
 
 **Data policy:** all schema data comes from a lab site. No production data, hostnames or organization details are in the repo.
@@ -66,13 +67,13 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 
 Work is tracked as [milestones](https://github.com/JBoogieman/v-where/milestones) and [issues](https://github.com/JBoogieman/v-where/issues):
 
-| Phase | Goal |
-| --- | --- |
-| 1. Explain the page | Hover help, How it works panel, plain-English connections |
-| 2. Docs and README | A README that leads with the tool, a user guide, how the connections work, this summary |
-| 3. Search quality | Exact matches first, less synonym noise, history views labeled, column descriptions, phone layout |
-| 4. Project hygiene | Tests on every push, tagged releases with a changelog, issue templates and contributing notes |
-| 5. Reach | Export that works in locked-down PowerShell, longer join chains, feedback from other ConfigMgr admins |
+| Phase | Goal | Status |
+| --- | --- | --- |
+| 1. Explain the page | Hover help, How it works panel, plain-English connections | Done |
+| 2. Docs and README | A README that leads with the tool, a user guide, how the connections work, this summary | Done |
+| 3. Search quality | Exact matches first, less synonym noise, history views labeled, column descriptions, phone layout | Done |
+| 4. Project hygiene | Tests on every push, tagged releases with a changelog, issue templates and contributing notes | Done (v0.1.0) |
+| 5. Reach | Export that works in locked-down PowerShell, longer join chains, feedback from other ConfigMgr admins | Next |
 
 ---
 

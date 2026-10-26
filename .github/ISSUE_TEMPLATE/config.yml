@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How do I...?
+    url: https://github.com/JBoogieman/v-where/blob/main/docs/user-guide.md
+    about: The user guide covers finding data, building a report, putting it in ConfigMgr and using your own schema.

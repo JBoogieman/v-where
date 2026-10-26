@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Don't publish a broken page: the tests run first, and a failure stops the deploy.
+      - run: node tools/test_search.js && node tools/test_joinplan.js && node tools/test_rdl.js
+
       # Bakes data/schema.json into web/index.html. The runner already has Python 3.
       - run: python3 tools/build_offline.py --out _site/index.html
 

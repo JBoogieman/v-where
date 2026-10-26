@@ -1,0 +1,38 @@
+# Runs the tests on every push and pull request, and checks the offline build still works.
+# Same commands you run locally (README: Run it yourself). Results show in the Actions tab
+# and as a check on each pull request.
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:        # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read            # read the repo; nothing else
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The runner already has Node and Python 3, and the tests have no dependencies to install.
+      - run: node --version
+
+      - name: Search tests
+        run: node tools/test_search.js
+
+      - name: Join planner tests
+        run: node tools/test_joinplan.js
+
+      - name: Report (.rdl) tests
+        run: node tools/test_rdl.js
+
+      - name: Offline build
+        run: |
+          python3 tools/build_offline.py --out dist/v_where.html
+          if grep -q '<script src=' dist/v_where.html; then
+            echo "::error::dist/v_where.html still loads a script file, so it won't work offline"
+            exit 1
+          fi
