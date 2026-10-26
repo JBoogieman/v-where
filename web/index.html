@@ -319,8 +319,12 @@
   // Either way init runs after this script finishes, once every helper below is defined.
   const load = (embedded && !params.has('data'))
     ? Promise.resolve().then(() => JSON.parse(embedded))
-    : fetch(DATA_URL).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    : fetch(DATA_URL).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(parseSchema);
   load.then(init).catch(() => showDropZone());
+
+  // Line breaks are dropped before parsing: sqlcmd's export starts a new line every 2,000 or so characters,
+  // even mid-word, and valid JSON never has a raw line break inside a string, so removing them is always safe.
+  function parseSchema(text) { return JSON.parse(text.replace(/[\r\n]/g, '')); }
 
   function showDropZone() {
     els.stats.textContent = 'No schema loaded';
@@ -328,7 +332,7 @@
     els.detail.innerHTML = `<div id="drop"><p><strong>Couldn't load <code>${esc(DATA_URL)}</code>.</strong></p>
       <p>Opened straight from disk? Browsers block that. Pick or drop your <code>schema.json</code> instead.</p>
       <p><input type="file" id="file" accept=".json,application/json"></p></div>`;
-    const read = (f) => f && f.text().then(t => init(JSON.parse(t))).catch(e => toast('Not a valid schema.json'));
+    const read = (f) => f && f.text().then(t => init(parseSchema(t))).catch(e => toast('Not a valid schema.json'));
     $('#file').addEventListener('change', e => read(e.target.files[0]));
     document.addEventListener('dragover', e => e.preventDefault());
     document.addEventListener('drop', e => { e.preventDefault(); read(e.dataTransfer.files[0]); });
