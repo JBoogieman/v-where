@@ -38,7 +38,9 @@ def main() -> int:
         return 1
 
     raw = args.schema.read_text(encoding='utf-8-sig')   # utf-8-sig: sqlcmd may write a byte order mark
-    data = json.loads(raw)                      # fail fast on a broken export
+    # Line breaks are dropped first: sqlcmd's export starts a new line every 2,000 or so characters, even
+    # mid-word, and valid JSON never has a raw line break inside a string. Fails fast on a broken export.
+    data = json.loads(raw.replace('\r', '').replace('\n', ''))
     # Re-serialize compactly; escape "</" so nothing in the data can end the <script> tag early.
     payload = json.dumps(data, separators=(',', ':'), ensure_ascii=False).replace('</', '<\\/')
 

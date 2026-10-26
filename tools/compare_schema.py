@@ -15,7 +15,8 @@ import sys
 
 
 def load(path):
-    data = json.loads(pathlib.Path(path).read_text(encoding='utf-8-sig'))
+    text = pathlib.Path(path).read_text(encoding='utf-8-sig')
+    data = json.loads(text.replace('\r', '').replace('\n', ''))   # sqlcmd breaks long output into lines
     return data, {o['name']: o for o in data['objects']}
 
 
