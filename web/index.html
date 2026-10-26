@@ -82,7 +82,8 @@
   .empty kbd, .hint kbd { font-family: var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 12px; }
   #drop { margin: 40px auto; max-width: 520px; border: 2px dashed var(--line); border-radius: 12px; padding: 30px; text-align: center; color: var(--muted); }
   footer { padding: 6px 20px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); background: var(--panel); }
-  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 6px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none;
+    width: max-content; max-width: calc(100vw - 32px); text-align: center; z-index: 40; }
   .toast.show { opacity: 1; }
   /* Report draft */
   #basketBtn { font-weight: 600; }
@@ -90,14 +91,14 @@
   td.addcell { width: 34px; padding-right: 0; }
   button.add { width: 24px; height: 24px; padding: 0; line-height: 22px; font-weight: 700; }
   button.add[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  #basket { position: fixed; top: 0; right: 0; bottom: 0; width: min(600px, 100vw); z-index: 10; display: flex; flex-direction: column;
+  .sidepanel { position: fixed; top: 0; right: 0; bottom: 0; width: min(600px, 100vw); z-index: 10; display: flex; flex-direction: column;
     background: var(--panel); border-left: 1px solid var(--line); box-shadow: -10px 0 30px rgba(0, 0, 0, .2); }
-  #basket[hidden] { display: none; }
-  #basket .bhead { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
-  #basket .bhead h2 { margin: 0; font: 600 16px var(--sans); }
-  #basket .bhead .close { margin-left: auto; }
-  #basket .bbody { flex: 1; overflow: auto; padding: 12px 18px 30px; }
-  #basket .lead { color: var(--muted); margin: 0 0 10px; }
+  .sidepanel[hidden] { display: none; }
+  .sidepanel .bhead { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .sidepanel .bhead h2 { margin: 0; font: 600 16px var(--sans); }
+  .sidepanel .bhead .close { margin-left: auto; }
+  .sidepanel .bbody { flex: 1; overflow: auto; padding: 12px 18px 30px; }
+  .sidepanel .lead { color: var(--muted); margin: 0 0 10px; }
   .bcols td { vertical-align: middle; }
   .bcols input[type="text"] { width: 100%; font: 13px var(--sans); padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--text); }
   .bcols .src { font: 11px var(--mono); color: var(--muted); word-break: break-word; overflow-wrap: anywhere; }
@@ -120,6 +121,31 @@
   .rdlrow .site input { width: 70px; text-transform: uppercase; font-family: var(--mono); }
   .rdlrow input.need { border-color: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
   #basket .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  /* Help: hover tips, first-visit strip, How it works panel, connection list */
+  #tip { position: fixed; top: 0; left: 0; z-index: 30; max-width: 320px; padding: 7px 10px; border-radius: 6px; background: var(--text); color: var(--bg);
+    font: 12px/1.45 var(--sans); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; opacity: 0; transition: opacity .12s; }
+  #tip.show { opacity: 1; }
+  .badge[data-tip], .tag[data-tip], .sub [data-tip], th[data-tip], .via[data-tip], .stats[data-tip], summary[data-tip] { cursor: help; }
+  #helpBtn .q { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-right: 5px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+  .intro { display: flex; gap: 8px 18px; align-items: center; flex-wrap: wrap; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-soft); font-size: 13px; }
+  .intro[hidden] { display: none; }
+  .intro b { font-weight: 600; }
+  .steps { display: flex; gap: 6px 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  .steps li { counter-increment: step; }
+  .steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+  .intro .btns { margin-left: auto; display: flex; gap: 6px; }
+  #help .steps { flex-direction: column; gap: 10px; margin: 6px 0 4px; }
+  #help .steps li { display: grid; grid-template-columns: 24px 1fr; }
+  #help .steps li::before { margin-top: 1px; }
+  #help h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 22px 0 8px; }
+  #help p { margin: 0 0 10px; }
+  #help td:first-child { white-space: nowrap; font-weight: 600; padding-right: 14px; }
+  #help code { font-family: var(--mono); font-size: 12px; }
+  .legend { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+  .conn ol { margin: 6px 0 0; padding-left: 22px; }
+  .conn li { margin-bottom: 6px; }
+  .conn li.where { list-style: none; margin-left: -22px; color: var(--muted); font-size: 12px; }
+  .conn a.link { font-family: var(--sans); }
   @media (max-width: 760px) {
     main { grid-template-columns: 1fr; grid-template-rows: 45% 55%; }
     #results { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -132,12 +158,22 @@
   <div class="brand">
     <h1>v<span>_</span>Where</h1>
     <p>Where is that data in ConfigMgr?</p>
-    <div class="stats" id="stats">Loading schema…</div>
+    <div class="stats" id="stats" data-tip="Size of the bundled schema: views, permission-filtered fn_rbac_ functions, and columns.">Loading schema…</div>
   </div>
   <div class="searchrow">
     <input id="q" type="search" placeholder="Search views and columns: bitlocker, last logon, install date…" autocomplete="off" spellcheck="false" aria-label="Search">
-    <label class="toggle"><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
-    <button type="button" id="basketBtn" aria-expanded="false" aria-controls="basket" title="Columns you've picked, joined into one query">Report draft<span class="count" id="basketCount">0</span></button>
+    <label class="toggle" data-tip="Also list the fn_rbac_ functions: permission-filtered versions of the views that SSRS reports use. Most searches don't need them."><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
+    <button type="button" id="helpBtn" aria-expanded="false" aria-controls="help" data-tip="What v_Where does, the three steps, and the words you'll see."><span class="q">?</span>How it works</button>
+    <button type="button" id="basketBtn" aria-expanded="false" aria-controls="basket" data-tip="Your report: the columns you've picked with +. Opens a panel that connects them into one query and can download a ConfigMgr report.">Report draft<span class="count" id="basketCount">0</span></button>
+  </div>
+  <div class="intro" id="intro" hidden>
+    <b>New here?</b>
+    <ol class="steps">
+      <li>Search in plain words</li>
+      <li>Click <b>+</b> on the columns you want</li>
+      <li>Open <b>Report draft</b>: v_Where connects the tables and writes the report</li>
+    </ol>
+    <span class="btns"><button type="button" data-intro="help">How it works</button><button type="button" data-intro="ok">Got it</button></span>
   </div>
   <div class="syn" id="syn" hidden></div>
   <div class="chips" id="chips" role="toolbar" aria-label="Categories"></div>
@@ -146,9 +182,48 @@
   <div id="results" role="listbox" aria-label="Results"></div>
   <div id="detail"></div>
 </main>
-<aside id="basket" hidden aria-label="Report draft"></aside>
+<aside id="basket" class="sidepanel" hidden aria-label="Report draft"></aside>
+<aside id="help" class="sidepanel" hidden aria-label="How it works">
+  <div class="bhead"><h2>How v_Where works</h2><button type="button" class="close" aria-label="Close help">✕</button></div>
+  <div class="bbody">
+    <p>ConfigMgr keeps what it knows about devices in hundreds of SQL <b>views</b> (read-only tables) with names that don't say what they hold.
+      v_Where finds the right ones for you and builds the report, without anyone writing SQL.</p>
+    <ol class="steps">
+      <li><span><b>Search in plain words:</b> <code>ram</code>, <code>last boot</code>, <code>bitlocker</code>. Results list the views that hold it, with the matching columns highlighted.</span></li>
+      <li><span><b>Click + next to the columns you want</b>, from as many views as you need. Each one goes into your Report draft.</span></li>
+      <li><span><b>Open Report draft.</b> v_Where lines the views up by device, explains each connection in plain English, and gives you the SQL or a ready-to-upload ConfigMgr report (.rdl).</span></li>
+    </ol>
+    <h3>Why is there a "join" when I only clicked +?</h3>
+    <p>Columns from different views live in different tables. To show them side by side, one row per device, the tables have to be matched up by
+      each device's ID. In SQL that matching is called a <b>join</b>. Clicking + says "I want this column"; v_Where works out the joins for you,
+      and the Report draft lists each one in plain English.</p>
+    <h3>Words you'll see</h3>
+    <table>
+      <tr><td>View</td><td>A read-only table ConfigMgr provides for reporting. Think of one sheet in a workbook.</td></tr>
+      <tr><td>Column</td><td>One piece of data in a view, like a column header on that sheet: <code>LastBootUpTime0</code>, <code>Model0</code>.</td></tr>
+      <tr><td>Device ID</td><td><code>ResourceID</code>: the number ConfigMgr gives each device. It's in most views, and it's how views are lined up.</td></tr>
+      <tr><td>Connection (join)</td><td>Putting columns from different views side by side by matching device IDs. v_Where writes these.</td></tr>
+      <tr><td>Link table</td><td>A view holding two kinds of ID (for example user and device), added when two views share no ID directly.</td></tr>
+      <tr><td>One row per device</td><td>Most views have one row for each device. Some have several (one per disk, program or update); v_Where warns you.</td></tr>
+      <tr><td><code>v_R_</code>, <code>v_RA_</code></td><td>Discovery: devices and users found in Active Directory and on the network.</td></tr>
+      <tr><td><code>v_GS_</code></td><td>Hardware inventory: the latest snapshot each device reported.</td></tr>
+      <tr><td><code>v_HS_</code></td><td>Inventory history: earlier values. Most reports want <code>v_GS_</code> instead.</td></tr>
+      <tr><td><code>v_CH_</code></td><td>Client health: whether the ConfigMgr client is working and checking in.</td></tr>
+      <tr><td>Trailing 0</td><td>In <code>Model0</code> or <code>Name0</code> it's just ConfigMgr's naming habit for inventory columns. Ignore it.</td></tr>
+      <tr><td>Not collected by default</td><td>The view exists, but ConfigMgr doesn't gather that data until someone turns it on (Client Settings, Hardware Inventory, Set Classes).</td></tr>
+      <tr><td><code>fn_rbac_</code></td><td>Permission-filtered versions of views. Built-in ConfigMgr reports use them so people only see the devices their console role allows.</td></tr>
+      <tr><td>Collection</td><td>A group of devices or users in ConfigMgr. Reports usually ask which one to run against.</td></tr>
+      <tr><td>Readable values</td><td>Raw numbers and codes turned into words: memory in GB, 1/0 as Yes/No, status codes as names.</td></tr>
+      <tr><td>.rdl</td><td>A report file for SQL Server Reporting Services, which the ConfigMgr console's Reporting node uses.</td></tr>
+    </table>
+    <h3>Is it safe to use?</h3>
+    <p>v_Where never connects to a ConfigMgr database. It searches a file of view and column names, with no device or user data in it.
+      The SQL and reports it writes only read data, and only when someone runs them.</p>
+  </div>
+</aside>
 <footer id="footer">Schema-only reference: view and column names and types. No ConfigMgr data.</footer>
 <div class="toast" id="toast"></div>
+<div id="tip" role="tooltip"></div>
 
 <!-- Empty here. tools/build_offline.py fills it with schema.json to make a single offline file. -->
 <script id="embedded-schema" type="application/json"></script>
@@ -176,6 +251,34 @@
     ['Endpoint protection',     /^v_(EP|AM_|Malware|Threat|Defender)/i],
   ];
   const OTHER = 'Other';
+  // Hover text for the category chips
+  const CATEGORY_TIPS = {
+    '': 'Results from every group.',
+    'Discovery': 'Devices and users ConfigMgr found in Active Directory and on the network (v_R_ and v_RA_ views).',
+    'Hardware inventory': 'What each device reports about itself: hardware, Windows, disks, memory. The latest snapshot (v_GS_ views).',
+    'Inventory history': 'Earlier values of hardware inventory (v_HS_ views). Most reports want Hardware inventory instead.',
+    'Software updates': 'Updates, their details, and which devices have them installed or still need them.',
+    'Collections': 'Collections, and which devices or users are in them.',
+    'Apps & deployments': 'Applications, packages, deployments and whether they installed.',
+    'OS deployment': 'Task sequences, boot images and OS deployment status.',
+    'Compliance settings': 'Configuration items and baselines, and whether devices comply.',
+    'Software inventory': 'Installed programs and software usage.',
+    'Client health & status': 'Whether the ConfigMgr client is healthy and checking in, plus status messages.',
+    'Site & infrastructure': 'Site servers, boundaries and distribution points.',
+    'Security & RBAC': 'Console administrators, roles and scopes.',
+    'Endpoint protection': 'Antimalware status and threats found.',
+    [OTHER]: "Everything that doesn't fit the groups above.",
+  };
+  const TIP = {
+    view: 'View: a read-only table ConfigMgr provides for reporting.',
+    function: 'Function: a permission-filtered version of a view. SSRS reports use these so people only see what their console role allows.',
+    off: "ConfigMgr doesn't collect this out of the box. The view exists but stays empty until the class is turned on in Client Settings (Hardware Inventory, Set Classes).",
+    offCol: "Not collected by default: stays empty until this property is turned on in Client Settings (Hardware Inventory, Set Classes).",
+    rbac: 'Has a permission-filtered fn_rbac_ version for SSRS reports.',
+    wmi: 'The Windows (WMI) class each device reads this data from.',
+    add: 'Add to your report. Columns from different views are lined up by device ID for you; no SQL needed.',
+    remove: 'In your report. Click to remove it.',
+  };
   // Columns that are too generic to be useful join hints
   const JOIN_STOP = new Set(['ID', 'GroupID', 'RevisionID', 'AgentID', 'RecordID', 'RowID', 'LocaleID', 'InstanceID', 'SiteID']);
 
@@ -294,7 +397,7 @@
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const els = { q: $('#q'), showFn: $('#showFn'), syn: $('#syn'), chips: $('#chips'), results: $('#results'), detail: $('#detail'), stats: $('#stats'), footer: $('#footer'), toast: $('#toast'),
-    basket: $('#basket'), basketBtn: $('#basketBtn'), basketCount: $('#basketCount') };
+    basket: $('#basket'), basketBtn: $('#basketBtn'), basketCount: $('#basketCount'), help: $('#help'), helpBtn: $('#helpBtn'), intro: $('#intro'), tip: $('#tip') };
 
   let DB = null;            // { header, objects[], byName{}, colIndex{} }
   let state = { q: '', cat: '', fn: false, obj: '' };
@@ -544,10 +647,10 @@
       const more = r.hitCols.size - cols.length;
       const off = o.hinv && !o.hinv.collected;
       return `<div class="item" role="option" data-i="${i}" aria-selected="${o.name === state.obj}">
-        <div class="name">${highlight(o.name, r.hl)}<span class="badge ${o.kind}">${o.kind === 'view' ? 'view' : 'fn'}</span>${off ? '<span class="tag warn" title="Default Client Settings does not collect this inventory class">not collected by default</span>' : ''}</div>
-        <div class="sub">${esc(o.cat)} · ${o.columns.length} columns${o.rbacFn ? ' · has fn_rbac_' : ''}${o.hinv && o.hinv.class ? ' · ' + esc(o.hinv.class) : ''}</div>
+        <div class="name">${highlight(o.name, r.hl)}<span class="badge ${o.kind}" data-tip="${esc(TIP[o.kind] || '')}">${o.kind === 'view' ? 'view' : 'fn'}</span>${off ? `<span class="tag warn" data-tip="${esc(TIP.off)}">not collected by default</span>` : ''}</div>
+        <div class="sub">${esc(o.cat)} · ${o.columns.length} columns${o.rbacFn ? ` · <span data-tip="${esc(TIP.rbac)}">has fn_rbac_</span>` : ''}${o.hinv && o.hinv.class ? ` · <span data-tip="${esc(TIP.wmi)}">${esc(o.hinv.class)}</span>` : ''}</div>
         ${cols.length ? `<div class="cols">${cols.map(c => highlight(c, r.hl)).join(', ')}${more > 0 ? ` +${more}` : ''}</div>` : ''}
-        ${r.via ? `<div class="via">matched as “${esc(r.via)}”</div>` : ''}
+        ${r.via ? `<div class="via" data-tip="Your words were translated into ConfigMgr's name for the same thing.">matched as “${esc(r.via)}”</div>` : ''}
       </div>`;
     }).join('');
     if (!total) html += `<div class="empty">No matches. Try fewer words, or turn on <code>fn_rbac_</code> functions or clear the category filter.</div>`;
@@ -557,8 +660,8 @@
   // ---------- Category chips ----------
   function renderChips() {
     const labels = [...CATEGORIES.map(c => c[0]), OTHER];
-    els.chips.innerHTML = [`<button class="chip" data-cat="" aria-pressed="${!state.cat}">All<span class="n" data-n=""></span></button>`]
-      .concat(labels.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`)).join('');
+    els.chips.innerHTML = [`<button class="chip" data-cat="" aria-pressed="${!state.cat}" data-tip="${esc(CATEGORY_TIPS[''])}">All<span class="n" data-n=""></span></button>`]
+      .concat(labels.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}" data-tip="${esc(CATEGORY_TIPS[l] || '')}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`)).join('');
   }
   function renderChipCounts(matched) {
     // Counts reflect the current query, across all categories
@@ -580,8 +683,9 @@
       <p>Search for a word you'd expect in a column or view name, like <code>bitlocker</code>, <code>last logon</code>, <code>install date</code>, <code>ResourceID</code>.</p>
       <p>Everyday words work too: <code>ram</code>, <code>uptime</code>, <code>primary user</code>, <code>kb</code>, <code>maintenance window</code>. They're translated into ConfigMgr's names.</p>
       <p class="hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open</p>
-      <p>Click any result to see its columns, its <code>fn_rbac_</code> twin, and which other views share its join keys.</p>
-      <p>Building a report? Click <b>+</b> next to columns from any views, then open <b>Report draft</b>: v_Where writes the joins.</p></div>`;
+      <p>Click any result to see its columns, its <code>fn_rbac_</code> version, and related views.</p>
+      <p>Building a report? Click <b>+</b> next to columns from any views, then open <b>Report draft</b>: v_Where connects the views for you and explains how.</p>
+      <p>New to ConfigMgr's tables? <b>How it works</b> (top right) explains the steps and the words you'll see. Hover over anything for a short explanation.</p></div>`;
   }
 
   function showDetail(name) {
@@ -597,9 +701,9 @@
     let rel = '';
     if (o.kind === 'view' && o.rbacFn) {
       const f = DB.byName[o.rbacFn];
-      rel = `RBAC-filtered version: <a class="link" data-go="${esc(o.rbacFn)}">${esc(o.rbacFn)}</a> <span class="desc">${esc(f && f.params.length ? '(' + f.params.map(p => p[0]).join(', ') + ')' : '')}</span>`;
+      rel = `RBAC-filtered version: <a class="link" data-go="${esc(o.rbacFn)}" data-tip="The permission-filtered version of this view. Built-in ConfigMgr reports use it so people only see what their console role allows.">${esc(o.rbacFn)}</a> <span class="desc">${esc(f && f.params.length ? '(' + f.params.map(p => p[0]).join(', ') + ')' : '')}</span>`;
     } else if (o.kind === 'function' && o.baseView) {
-      rel = `Permission-filtered wrapper around <a class="link" data-go="${esc(o.baseView)}">${esc(o.baseView)}</a>. Built-in SSRS reports query this form.`;
+      rel = `Permission-filtered wrapper around <a class="link" data-go="${esc(o.baseView)}" data-tip="Open the plain view this function filters.">${esc(o.baseView)}</a>. Built-in SSRS reports query this form.`;
     }
     const aliasNote = o.aliases.length
       ? `<div class="note">Also reachable by its old short name: ${o.aliases.map(a => `<code>${esc(a)}</code>`).join(', ')}. Older reports may use it.</div>` : '';
@@ -636,29 +740,32 @@
     const rv = reportView(o);   // the view these columns go into the report draft as (null: can't be added)
     const addBtn = (col) => {
       const on = rv && inReport(rv, col) >= 0;
-      return `<button type="button" class="add" data-add="${esc(col)}" aria-pressed="${on}" title="${on ? 'Remove from' : 'Add to'} report draft">${on ? '✓' : '+'}</button>`;
+      return `<button type="button" class="add" data-add="${esc(col)}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(col)} ${on ? 'from' : 'to'} report draft" data-tip="${esc(on ? TIP.remove : TIP.add)}">${on ? '✓' : '+'}</button>`;
     };
+    const legend = [hits.size ? 'Highlighted rows match your search.' : '', rv ? 'Click <b>+</b> to add a column to your report.' : ''].filter(Boolean).join(' ');
 
     els.detail.innerHTML = `
-      <h2>${esc(o.name)}<span class="badge ${o.kind}">${o.kind}</span></h2>
+      <h2>${esc(o.name)}<span class="badge ${o.kind}" data-tip="${esc(TIP[o.kind] || '')}">${o.kind}</span></h2>
       <div class="desc">${esc(o.cat)} · ${o.columns.length} columns${paramSig ? ' · parameters ' + esc(paramSig) : ''}</div>
       ${rel ? `<div>${rel}</div>` : ''}
       ${hinvNote}${aliasNote}
       <div class="actions">
-        <button data-copy="name">Copy name</button>
-        <button data-copy="sql">Copy SELECT${pick ? ` (${selectCols.length} matched column${selectCols.length === 1 ? '' : 's'})` : ' (all columns)'}</button>
-        ${rv && pick ? `<button data-addmatched>Add matched to report draft</button>` : ''}
+        <button data-copy="name" data-tip="Copy this view's name.">Copy name</button>
+        <button data-copy="sql" data-tip="Copy a ready-to-run query for this view on its own: the highlighted columns, or all of them.">Copy SELECT${pick ? ` (${selectCols.length} matched column${selectCols.length === 1 ? '' : 's'})` : ' (all columns)'}</button>
+        ${rv && pick ? `<button data-addmatched data-tip="Add every highlighted column to your report in one go.">Add matched to report draft</button>` : ''}
       </div>
       <section><h3>Columns</h3>
-        <table><thead><tr>${rv ? '<th></th>' : ''}<th>Column</th><th>Type</th><th>Null</th></tr></thead><tbody>
+        ${legend ? `<p class="legend">${legend}</p>` : ''}
+        <table><thead><tr>${rv ? '<th data-tip="Add a column to your report.">+</th>' : ''}<th>Column</th><th data-tip="Kind of data: nvarchar = text, int or bigint = whole number, datetime = date and time, bit = yes/no.">Type</th><th data-tip="yes = this column can be blank for some devices.">Null</th></tr></thead><tbody>
         ${o.columns.map(c => {
           const off = o.offColumns.has(c.name);
-          return `<tr class="${[hits.has(c.name) ? 'hit' : '', off ? 'off' : ''].join(' ').trim()}">${rv ? `<td class="addcell">${addBtn(c.name)}</td>` : ''}<td class="mono">${highlight(c.name, hl)}${off ? '<span class="tag">not collected</span>' : ''}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? 'yes' : ''}</td></tr>`;
+          return `<tr class="${[hits.has(c.name) ? 'hit' : '', off ? 'off' : ''].join(' ').trim()}">${rv ? `<td class="addcell">${addBtn(c.name)}</td>` : ''}<td class="mono">${highlight(c.name, hl)}${off ? `<span class="tag" data-tip="${esc(TIP.offCol)}">not collected</span>` : ''}</td><td class="mono">${esc(c.type)}</td><td>${c.nullable ? 'yes' : ''}</td></tr>`;
         }).join('')}
         </tbody></table>
       </section>
-      ${joins.length ? `<section class="joins"><h3>Join hints: views sharing a key column</h3>
-        ${joins.map(j => `<details><summary><code>${esc(j.c)}</code>: ${j.others.length} other view${j.others.length === 1 ? '' : 's'}</summary>
+      ${joins.length ? `<section class="joins"><h3>Related views</h3>
+        <p class="legend">These views share an ID column with this one, so they can be lined up with it in a report.</p>
+        ${joins.map(j => `<details><summary data-tip="Every view listed here also has ${esc(j.c)}. Matching on it puts their rows next to this view's rows.">Share <code>${esc(j.c)}</code>: ${j.others.length} view${j.others.length === 1 ? '' : 's'}</summary>
           <div class="list">${j.others.sort().map(v => `<a class="link" data-go="${esc(v)}">${esc(v)}</a>`).join('')}</div></details>`).join('')}
       </section>` : ''}`;
 
@@ -709,15 +816,19 @@
     els.detail.querySelectorAll('button[data-add]').forEach(b => {
       const on = inReport(rv, b.dataset.add) >= 0;
       b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '✓' : '+';
-      b.title = `${on ? 'Remove from' : 'Add to'} report draft`;
+      b.dataset.tip = on ? TIP.remove : TIP.add;
+      b.setAttribute('aria-label', `${on ? 'Remove' : 'Add'} ${b.dataset.add} ${on ? 'from' : 'to'} report draft`);
     });
   }
 
   function toggleColumn(view, col) {
     const i = inReport(view, col);
+    const newView = i < 0 && report.cols.length && !report.cols.some(c => c.view === view);
     if (i >= 0) report.cols.splice(i, 1); else report.cols.push({ view, column: col });
     reportChanged();
-    toast(i >= 0 ? `Removed ${col}` : `Added ${col} · ${report.cols.length} in report`);
+    if (i >= 0) toast(`Removed ${col}`);
+    else if (newView) toast(`Added ${col} from ${VWhereJoin.friendly(view)}. It will be lined up with your other columns by device.`);
+    else toast(`Added ${col} · ${report.cols.length} in report`);
   }
 
   function draft(force) {
@@ -758,6 +869,7 @@
   function openBasket(open) {
     els.basket.hidden = !open;
     els.basketBtn.setAttribute('aria-expanded', String(open));
+    if (open && !els.help.hidden) { els.help.hidden = true; els.helpBtn.setAttribute('aria-expanded', 'false'); }
     if (open) { renderBasket(); els.basket.querySelector('.close').focus(); }
     else els.basketBtn.focus();
   }
@@ -767,19 +879,26 @@
     const cols = report.cols;
     let body;
     if (!cols.length) {
-      body = `<p class="lead">Open any view and click <b>+</b> next to a column. Pick columns from as many views as you need; v_Where writes the joins.</p>
+      body = `<p class="lead">Open any view and click <b>+</b> next to a column. Pick columns from as many views as you need; v_Where connects them for you.</p>
         <p class="lead">Try: search <code>last boot</code>, open <code>v_GS_OPERATING_SYSTEM</code>, add <code>LastBootUpTime0</code>. Then search <code>ram</code> and add <code>TotalPhysicalMemory0</code>.</p>`;
     } else {
       const { p, sql } = draft();
       const views = new Set(cols.map(c => c.view)).size;
+      const steps = VWhereJoin.explain(p);
       body = `<p class="lead">${cols.length} column${cols.length === 1 ? '' : 's'} from ${views} view${views === 1 ? '' : 's'}. Rename a column to set its report header.</p>
-        <table class="bcols"><thead><tr><th>Header</th><th>From</th><th></th></tr></thead><tbody>
+        <table class="bcols"><thead><tr><th data-tip="The column name the report will show. Leave blank to use the suggested name.">Header</th><th data-tip="The column and the view it comes from. Click the view to open it.">From</th><th></th></tr></thead><tbody>
         ${cols.map((c, i) => `<tr>
           <td><input type="text" data-label="${i}" value="${esc(c.as || '')}" placeholder="${esc(defaultHeader(c))}" aria-label="Header for ${esc(c.column)}"></td>
-          <td class="src"><div class="col">${esc(c.column)}${report.readable && VWhereJoin.formatOf(c.view, c.column) ? `<span class="tag fmt" title="Readable values: shown as ${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}">${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}</span>` : ''}</div><a class="link" data-go="${esc(c.view)}" title="Open ${esc(c.view)}">${esc(c.view)}</a></td>
-          <td class="mv"><button type="button" data-up="${i}" title="Move up" ${i ? '' : 'disabled'}>↑</button> <button type="button" data-down="${i}" title="Move down" ${i < cols.length - 1 ? '' : 'disabled'}>↓</button> <button type="button" data-rm="${i}" title="Remove">✕</button></td>
+          <td class="src"><div class="col">${esc(c.column)}${report.readable && VWhereJoin.formatOf(c.view, c.column) ? `<span class="tag fmt" data-tip="Readable values: shown as ${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}">${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}</span>` : ''}</div><a class="link" data-go="${esc(c.view)}" data-tip="Open ${esc(c.view)}">${esc(c.view)}</a></td>
+          <td class="mv"><button type="button" data-up="${i}" data-tip="Move up: columns appear in this order in the report" aria-label="Move up" ${i ? '' : 'disabled'}>↑</button> <button type="button" data-down="${i}" data-tip="Move down" aria-label="Move down" ${i < cols.length - 1 ? '' : 'disabled'}>↓</button> <button type="button" data-rm="${i}" data-tip="Remove from the report" aria-label="Remove">✕</button></td>
         </tr>`).join('')}
         </tbody></table>
+        <section class="conn"><h3>How the tables are connected</h3>
+          <p class="lead">To show these columns side by side, one row per ${p.anchor === VWhereJoin.HUB ? 'device' : 'user'}, v_Where lines the tables up by ID.
+            In SQL that's called a join; it's written for you in the query below. ${p.anchor === VWhereJoin.HUB ? 'Devices' : 'Users'} with no data in a table still show, with blanks.
+            <a class="link" data-help href="#" role="button">More in How it works</a></p>
+          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : ''}">${esc(s.text)}</li>`).join('')}</ol>
+        </section>
         <div class="opts">
           <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
             <span>Only devices in one collection <span class="hint">(adds <code>@CollectionID</code>, like built-in reports)</span></span></label>
@@ -790,7 +909,7 @@
           <label><input type="checkbox" data-opt="rbac" ${report.rbac ? 'checked' : ''}>
             <span>SSRS version <span class="hint">(<code>fn_rbac_</code> functions with <code>@UserSIDs</code>, so people only see what their console role allows)</span></span></label>
         </div>
-        ${p.warnings.map(w => w.kept
+        ${p.warnings.filter(w => !p.joins.some(j => j.view === w.view && j.role === 'bridge')).map(w => w.kept
           ? `<div class="note">${esc(w.text)}<button type="button" data-unkeep="${esc(w.view)}">Undo</button></div>`
           : `<div class="note warn">${esc(w.text)}${w.fix ? `<button type="button" data-keep="${esc(w.view)}">Keep one row: ${esc(w.fix.replace(/^AND /, ''))}</button>` : ''}</div>`).join('')}
         ${p.unplaced.map(u => `<div class="note warn"><b>Left out ${esc(u.view)}.</b> ${esc(u.why)}</div>`).join('')}
@@ -798,17 +917,62 @@
           <div class="rdlrow">
             <label class="title">Report name<input type="text" data-meta="title" value="${esc(report.title)}" placeholder="Report draft"></label>
             <label class="site">Site code<input type="text" data-meta="site" value="${esc(report.site)}" maxlength="3" placeholder="PS1" spellcheck="false"></label>
-            <button type="button" class="primary" data-rdl>Download .rdl</button>
+            <button type="button" class="primary" data-rdl data-tip="Download a report file. Upload it to the ConfigMgr reports folder in SSRS, or open it in Report Builder.">Download .rdl</button>
           </div>
           <p class="hint">Upload it to your <code>ConfigMgr_&lt;site&gt;</code> folder in the SSRS web portal, or open it in Report Builder. It uses the
             site's shared data source, a collection picker, and the <code>fn_rbac_</code> functions, so it respects console permissions like built-in reports.</p>
         </section>
         <section><h3>Query</h3><pre class="sql">${esc(sql)}</pre></section>
-        <div class="actions"><button type="button" data-copysql>Copy query</button><button type="button" data-clear>Clear report</button></div>`;
+        <div class="actions"><button type="button" data-copysql data-tip="Copy the SQL to run in SQL Server Management Studio or paste into Report Builder.">Copy query</button><button type="button" data-clear data-tip="Remove every column from the report (asks twice).">Clear report</button></div>`;
     }
     els.basket.innerHTML = `<div class="bhead"><h2>Report draft</h2><button type="button" class="close" aria-label="Close report draft">✕</button></div>
       <div class="bbody">${body}</div>`;
   }
+
+  // ---------- How it works: first-visit strip and help panel ----------
+  const INTRO = 'vwhere.intro.v1';
+  function introSeen() { try { return localStorage.getItem(INTRO) === '1'; } catch (e) { return false; } }
+  function dismissIntro() { try { localStorage.setItem(INTRO, '1'); } catch (e) { /* not remembered, still hidden for now */ } els.intro.hidden = true; }
+  els.intro.hidden = introSeen();
+
+  function openHelp(open) {
+    els.help.hidden = !open;
+    els.helpBtn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      if (!els.basket.hidden) { els.basket.hidden = true; els.basketBtn.setAttribute('aria-expanded', 'false'); }
+      els.help.querySelector('.close').focus();
+    } else els.helpBtn.focus();
+  }
+
+  // ---------- Hover tips ----------
+  // Anything with data-tip explains itself on hover (after a short pause) or keyboard focus.
+  let tipTimer, tipFor = null;
+  function showTip(el) {
+    const t = els.tip;
+    t.textContent = el.dataset.tip;
+    t.classList.add('show');
+    const r = el.getBoundingClientRect(), b = t.getBoundingClientRect(), pad = 8;
+    let top = r.bottom + 6;
+    if (top + b.height > window.innerHeight - pad) top = r.top - b.height - 6;
+    const left = Math.min(Math.max(pad, r.left + r.width / 2 - b.width / 2), window.innerWidth - b.width - pad);
+    t.style.top = Math.max(pad, top) + 'px';
+    t.style.left = Math.max(pad, left) + 'px';
+  }
+  function hideTip() { clearTimeout(tipTimer); tipFor = null; els.tip.classList.remove('show'); }
+  const tipTarget = (e) => (e.target.closest && e.target.closest('[data-tip]')) || null;
+  document.addEventListener('mouseover', e => {
+    const el = tipTarget(e);
+    if (el === tipFor) return;
+    hideTip();
+    if (!el || !el.dataset.tip) return;
+    tipFor = el;
+    tipTimer = setTimeout(() => showTip(el), 300);
+  });
+  document.addEventListener('focusin', e => { const el = tipTarget(e); hideTip(); if (el && el.dataset.tip && el.matches(':focus-visible')) { tipFor = el; showTip(el); } });
+  document.addEventListener('focusout', hideTip);
+  document.addEventListener('click', hideTip);
+  // Scrolling hides a tip that's showing; a pending one still appears, positioned where the element ends up
+  document.addEventListener('scroll', () => { if (els.tip.classList.contains('show')) hideTip(); }, true);
 
   function goTo(name) {
     if (!DB.byName[name]) return;
@@ -830,7 +994,7 @@
   let toastTimer;
   function toast(msg) {
     els.toast.textContent = msg; els.toast.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove('show'), 1400);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove('show'), Math.min(4500, Math.max(1400, msg.length * 45)));
   }
 
   // ---------- Events ----------
@@ -858,9 +1022,20 @@
     const a = e.target.closest('[data-go]'); if (a) goTo(a.dataset.go);
   });
 
+  // How it works
+  els.helpBtn.addEventListener('click', () => openHelp(els.help.hidden));
+  els.help.querySelector('.close').addEventListener('click', () => openHelp(false));
+  els.intro.addEventListener('click', e => {
+    const b = e.target.closest('button[data-intro]'); if (!b) return;
+    dismissIntro();
+    if (b.dataset.intro === 'help') openHelp(true);
+    else els.q.focus();
+  });
+
   // Report draft panel
   els.basketBtn.addEventListener('click', () => openBasket(els.basket.hidden));
   els.basket.addEventListener('click', e => {
+    if (e.target.closest('[data-help]')) { e.preventDefault(); openHelp(true); return; }
     const t = e.target.closest('button, a[data-go]');
     if (!t) return;
     const d = t.dataset, cols = report.cols;
@@ -902,6 +1077,8 @@
   });
 
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hideTip();
+    if (e.key === 'Escape' && !els.help.hidden) { openHelp(false); return; }
     if (e.key === 'Escape' && !els.basket.hidden) { openBasket(false); return; }
     const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox';
     if (e.key === '/' && !typing) { e.preventDefault(); els.q.focus(); els.q.select(); return; }

@@ -187,4 +187,37 @@ test('every alias is unique and not a SQL keyword (all 443 device views at once)
     assert.ok(!all.some(a => /^(as|on|in|or|is|by|to|of|if|and|end|for|key|not|set|top|use)$/i.test(a)), 'reserved alias');
   });
 
+// ---- Plain-English explanation of the connections ----
+const said = (p) => J.explain(p).map(e => e.text);
+test('explain: one sentence per table, in query order, plus the Unknown Computer filter',
+  [C('v_R_System', 'Name0'), C('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0'), C('v_R_User', 'Unique_User_Name0')], { collection: true, skipUnknown: true },
+  (p) => {
+    const e = J.explain(p);
+    assert.deepStrictEqual(e.map(x => x.view), ['v_R_System', 'v_FullCollectionMembership', 'v_GS_OPERATING_SYSTEM', 'v_UsersPrimaryMachines', 'v_R_User', null]);
+    assert.match(e[0].text, /^Starts from Devices \(v_R_System\): one row per device\./);
+    assert.match(e[1].text, /keeps only the devices in the collection/);
+    assert.match(e[2].text, /^Operating System \(v_GS_OPERATING_SYSTEM\) is matched to each device by its ID \(ResourceID\)\.$/);
+    assert.match(e[3].text, /added for you as a link table: it connects users to devices\. A device with more than one primary user/);
+    assert.match(e[4].text, /^Users \(v_R_User\) is matched through Primary users\.$/);
+    assert.match(e[5].text, /Unknown Computer/);
+  });
+
+test('explain: multi-row views say so; a kept "one row" fix is described instead',
+  [C('v_GS_LOGICAL_DISK', 'FreeSpace0')], {},
+  (p) => assert.match(said(p)[1], /can have more than one row per device/));
+test('explain: kept fix',
+  [C('v_GS_LOGICAL_DISK', 'FreeSpace0')], { keepOne: ['v_GS_LOGICAL_DISK'] },
+  (p) => assert.match(said(p)[1], /Only one row per device is kept \(DeviceID0 = 'C:'\)\./));
+
+test('explain: update details go through the update status link table',
+  [C('v_R_System', 'Name0'), C('v_UpdateInfo', 'ArticleID')], {},
+  (p) => {
+    assert.match(said(p)[1], /^Update status per device \(v_UpdateComplianceStatus\) was added for you as a link table: it connects updates to devices\./);
+    assert.match(said(p)[2], /^Update details \(v_UpdateInfo\) is matched through Update status per device\.$/);
+  });
+
+test('explain: a user-only report starts from users',
+  [C('v_R_User', 'Unique_User_Name0'), C('v_R_User', 'Mail0')], {},
+  (p) => assert.match(said(p)[0], /^Starts from Users \(v_R_User\): one row per user\./));
+
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}`);

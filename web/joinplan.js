@@ -294,6 +294,52 @@
       .split(' ').map(w => w === w.toUpperCase() && w.length > 3 ? w[0] + w.slice(1).toLowerCase() : w).join(' ');
   }
 
+  // Plain-English names for the views people meet most in "how the tables are connected"
+  const FRIENDLY = {
+    v_R_System: 'Devices', v_R_User: 'Users', v_FullCollectionMembership: 'Collection membership',
+    v_UsersPrimaryMachines: 'Primary users', v_UpdateComplianceStatus: 'Update status per device',
+    v_CICurrentComplianceStatus: 'Configuration item status per device', v_UpdateInfo: 'Update details',
+    v_Collection: 'Collections', v_CH_ClientSummary: 'Client health', v_GS_X86_PC_MEMORY: 'Memory', v_GS_PC_BIOS: 'BIOS',
+    v_GS_SYSTEM_CONSOLE_USAGE: 'Console usage', v_GS_SYSTEM_CONSOLE_USER: 'Console users', v_Add_Remove_Programs: 'Installed programs',
+    v_GS_ADD_REMOVE_PROGRAMS: 'Installed programs (32-bit)', v_GS_ADD_REMOVE_PROGRAMS_64: 'Installed programs (64-bit)',
+  };
+  const friendly = (view) => FRIENDLY[view] || viewLabel(view);
+  // What each bridge connects, for the sentence that explains why it was added
+  const BRIDGE_WHAT = { user: 'users to devices', update: 'updates to devices', ci: 'configuration items to devices', collection: 'collections to devices' };
+
+  /**
+   * explain(plan) -> [{ view, role, text }] : one plain-English sentence per table in the query, in query order,
+   * plus one for the Unknown Computer filter. For people who have never written a join.
+   */
+  function explain(p) {
+    const name = (v) => `${friendly(v)} (${v})`;
+    const perWhat = p.anchor === HUB ? 'device' : 'user';
+    const out = [{ view: p.anchor, role: 'hub',
+      text: `Starts from ${name(p.anchor)}: one row per ${perWhat}. Every other table is lined up against this list.` }];
+    for (const j of p.joins) {
+      let text;
+      if (j.role === 'filter') {
+        text = `${name(j.view)} keeps only the devices in the collection picked when the report runs.`;
+      } else if (j.role === 'bridge') {
+        const kind = Object.keys(BRIDGES).find(k => BRIDGES[k].view === j.view);
+        text = `${name(j.view)} was added for you as a link table: it connects ${BRIDGE_WHAT[kind] || 'the other tables to devices'}. ${kind ? BRIDGES[kind].note : ''}`.trim();
+      } else if (j.viaBridge) {
+        text = `${name(j.view)} is matched through ${friendly(j.viaBridge)}.`;
+      } else {
+        const key = (j.on.match(/^\w+\.(\w+) =/) || [])[1] || 'ResourceID';
+        text = `${name(j.view)} is matched to each ${perWhat} by its ID (${key}).`;
+      }
+      const w = p.warnings.find(x => x.view === j.view && j.role === 'data');
+      if (w && w.kept) text += ` Only one row per ${perWhat} is kept (${PICK_ONE[j.view][0]} ${PICK_ONE[j.view][1]}).`;
+      else if (w) text += ` It can have more than one row per ${perWhat}, so a ${perWhat} may appear more than once.`;
+      out.push({ view: j.view, role: j.role, text });
+    }
+    if (p.where && p.where.length) {
+      out.push({ view: null, role: 'where', text: 'The two "Unknown Computer" placeholder records ConfigMgr keeps for OS deployment are left out.' });
+    }
+    return out;
+  }
+
   /**
    * toSQL(plan, columns, lookup, opts) -> query text
    *   columns    [{ view, column, as? }] in display order
@@ -343,7 +389,7 @@
     return lines.join('\n');
   }
 
-  const api = { plan, toSQL, headers, label, classify, formatOf, describe, HUB, BRIDGES, ONE_ROW, PICK_ONE, FORMATS };
+  const api = { plan, toSQL, headers, explain, label, viewLabel, friendly, classify, formatOf, describe, HUB, BRIDGES, ONE_ROW, PICK_ONE, FORMATS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.VWhereJoin = api;
 })(this);
