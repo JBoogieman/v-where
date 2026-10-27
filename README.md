@@ -12,7 +12,9 @@
 
 1. **Search in plain words:** `ram`, `last boot`, `bitlocker`, `primary user`. Everyday words are translated into ConfigMgr's names, and results list the views (tables) that hold the data, with the matching columns listed first and highlighted.
 2. **Click + on the columns you want,** from as many views as you need.
-3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, warns you before anything would repeat devices, and gives you the SQL or a ConfigMgr-ready `.rdl` report.
+3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, warns you before anything would repeat devices, and gives you the SQL or a ConfigMgr-ready `.rdl` report. Add filters ("model contains Latitude", "last boot more than 30 days ago"), and tick **Ask** to make any of them a question the report asks when it runs.
+
+Got a query already? **Explain SQL** takes any ConfigMgr query, an inherited report's or one from SSMS, and explains every view and column in it, flags what could go wrong, and converts it between the plain version and the SSRS (`fn_rbac_`) version.
 
 Hover over anything on the page for a short explanation, or open **How it works** for a glossary.
 
@@ -32,9 +34,9 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 | To | Do this |
 | --- | --- |
 | Use it offline | `python3 tools/build_offline.py` builds `dist/v_where.html` (about 1 MB). Copy it anywhere and double-click it. |
-| Use your own site's schema | Run `extractor/Export-VWhereSchema.sql` with sqlcmd (works where PowerShell is locked down) or `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#4-use-your-own-sites-schema). |
+| Use your own site's schema | Run `extractor/Export-VWhereSchema.sql` with sqlcmd (works where PowerShell is locked down) or `extractor/Export-VWhereSchema.ps1` against your site database, then build the offline copy with `--schema`. See the [user guide](docs/user-guide.md#5-use-your-own-sites-schema). |
 | Develop locally | From the repo root, `python3 -m http.server 8000`, then browse to `http://localhost:8000/web/`. |
-| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js`, `node tools/test_rdl.js` and `python3 tools/test_schema_tools.py`. They also run on every push and pull request. |
+| Run the tests | `node tools/test_search.js`, `node tools/test_joinplan.js`, `node tools/test_rdl.js`, `node tools/test_sqlexplain.js` and `python3 tools/test_schema_tools.py`. They also run on every push and pull request. |
 
 ## Docs
 
@@ -51,7 +53,7 @@ Nothing in your environment. v_Where is a static web page: it searches a file of
 
 | Path | What's there |
 | --- | --- |
-| `web/` | The page (`index.html`), search (`search.js`), column descriptions (`columns.js`), the join planner (`joinplan.js`) and the .rdl builder (`rdl.js`) |
+| `web/` | The page (`index.html`), search (`search.js`), column descriptions (`columns.js`), the join planner (`joinplan.js`), the .rdl builder (`rdl.js`) and the query explainer (`sqlexplain.js`) |
 | `data/schema.json` | Schema export from the lab site |
 | `extractor/` | The schema exporter: T-SQL for sqlcmd, or PowerShell |
 | `tools/` | Offline build script and tests |

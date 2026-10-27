@@ -29,6 +29,9 @@ jobs:
       - name: Report (.rdl) tests
         run: node tools/test_rdl.js
 
+      - name: Query explainer tests
+        run: node tools/test_sqlexplain.js
+
       - name: Schema file tools tests
         run: python3 tools/test_schema_tools.py
 

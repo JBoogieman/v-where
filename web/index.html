@@ -100,7 +100,27 @@
   /* Report draft */
   #basketBtn { font-weight: 600; }
   #basketBtn .count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 11px; text-align: center; }
-  td.addcell { width: 34px; padding-right: 0; }
+  td.addcell { width: 62px; padding-right: 0; white-space: nowrap; }
+  button.flt { width: 24px; height: 24px; padding: 0; margin-left: 4px; line-height: 22px; color: var(--muted); }
+  button.flt:hover { color: var(--accent); }
+  /* Filters in the Report draft */
+  .filters .frow { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(165px, 1.2fr) minmax(80px, 0.9fr) auto auto; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .filters .fcol { font: 12px var(--mono); overflow-wrap: anywhere; }
+  .filters .fcol small { display: block; font-size: 11px; color: var(--muted); }
+  .filters select, .filters input[type="text"], .filters input[type="number"], .filters input[type="date"] { font: 13px var(--sans); padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--text); min-width: 0; width: 100%; }
+  .filters .ask { font-size: 12px; color: var(--muted); display: flex; gap: 4px; align-items: center; white-space: nowrap; cursor: pointer; }
+  .filters .fproblem { grid-column: 1 / -1; font-size: 12px; color: var(--warn-text); }
+  .filters .fadd { margin-top: 8px; max-width: 320px; }
+  .conn li.filterline { color: var(--text); }
+  /* Explain a query */
+  #sqlIn { width: 100%; min-height: 160px; resize: vertical; font: 12px/1.5 var(--mono); padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
+  #sqlIn:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  #sqlOut h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 18px 0 8px; }
+  .xviews { list-style: none; margin: 0; padding: 0; }
+  .xviews li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .xviews .meta { color: var(--muted); font-size: 12px; }
+  .xcols td { font-size: 12px; }
+  .xcols td.bad { color: var(--bad-text); font-weight: 600; }
   button.add { width: 24px; height: 24px; padding: 0; line-height: 22px; font-weight: 700; }
   button.add[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .sidepanel { position: fixed; top: 0; right: 0; bottom: 0; width: min(600px, 100vw); z-index: 10; display: flex; flex-direction: column;
@@ -202,6 +222,7 @@
     <input id="q" type="search" placeholder="Search views and columns: bitlocker, last logon, install date…" autocomplete="off" spellcheck="false" aria-label="Search">
     <label class="toggle" data-tip="Also list the fn_rbac_ functions: permission-filtered versions of the views that SSRS reports use. Most searches don't need them."><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
     <button type="button" id="helpBtn" aria-expanded="false" aria-controls="help" data-tip="What v_Where does, the three steps, and the words you'll see."><span class="q">?</span>How it works</button>
+    <button type="button" id="sqlBtn" aria-expanded="false" aria-controls="sqlx" data-tip="Paste any ConfigMgr query: see what each view and column is, what could go wrong, and get the SSRS (fn_rbac_) or plain version.">Explain SQL</button>
     <button type="button" id="basketBtn" aria-expanded="false" aria-controls="basket" data-tip="Your report: the columns you've picked with +. Opens a panel that connects them into one query and can download a ConfigMgr report.">Report draft<span class="count" id="basketCount">0</span></button>
   </div>
   <div class="intro" id="intro" hidden>
@@ -221,6 +242,16 @@
   <div id="detail"></div>
 </main>
 <aside id="basket" class="sidepanel" hidden aria-label="Report draft"></aside>
+<aside id="sqlx" class="sidepanel" hidden aria-label="Explain a query">
+  <div class="bhead"><h2>Explain a query</h2><button type="button" class="close" aria-label="Close">✕</button></div>
+  <div class="bbody">
+    <p class="lead">Paste a query: an old report's, or one you wrote in SSMS. v_Where explains each view and column it uses, flags what could
+      go wrong, and converts it between the plain version (for SSMS) and the SSRS version (<code>fn_rbac_</code>, so reports respect console permissions).
+      It all happens in your browser; the query isn't sent anywhere or saved.</p>
+    <textarea id="sqlIn" spellcheck="false" aria-label="Query to explain" placeholder="SELECT sys.Name0, os.LastBootUpTime0&#10;FROM v_R_System sys&#10;JOIN v_GS_OPERATING_SYSTEM os ON os.ResourceID = sys.ResourceID"></textarea>
+    <div id="sqlOut"></div>
+  </div>
+</aside>
 <aside id="help" class="sidepanel" hidden aria-label="How it works">
   <div class="bhead"><h2>How v_Where works</h2><button type="button" class="close" aria-label="Close help">✕</button></div>
   <div class="bbody">
@@ -229,7 +260,7 @@
     <ol class="steps">
       <li><span><b>Search in plain words:</b> <code>ram</code>, <code>last boot</code>, <code>bitlocker</code>. Results list the views that hold it, with the matching columns highlighted.</span></li>
       <li><span><b>Click + next to the columns you want</b>, from as many views as you need. Each one goes into your Report draft.</span></li>
-      <li><span><b>Open Report draft.</b> v_Where lines the views up by device, explains each connection in plain English, and gives you the SQL or a ready-to-upload ConfigMgr report (.rdl).</span></li>
+      <li><span><b>Open Report draft.</b> v_Where lines the views up by device, explains each connection in plain English, and gives you the SQL or a ready-to-upload ConfigMgr report (.rdl). Add filters there, or with the funnel next to any column.</span></li>
     </ol>
     <h3>Why is there a "join" when I only clicked +?</h3>
     <p>Columns from different views live in different tables. To show them side by side, one row per device, the tables have to be matched up by
@@ -265,11 +296,12 @@
 
 <!-- Empty here. tools/build_offline.py fills it with schema.json to make a single offline file. -->
 <script id="embedded-schema" type="application/json"></script>
-<!-- Join planner (window.VWhereJoin), .rdl builder (window.VWhereRDL) search (window.VWhereSearch) and column descriptions (window.VWhereColumns). tools/build_offline.py inlines them. -->
+<!-- Join planner (window.VWhereJoin), .rdl builder (window.VWhereRDL) search (window.VWhereSearch), column descriptions (window.VWhereColumns) and the query explainer (window.VWhereSQL). tools/build_offline.py inlines them. -->
 <script src="joinplan.js"></script>
 <script src="rdl.js"></script>
 <script src="search.js"></script>
 <script src="columns.js"></script>
+<script src="sqlexplain.js"></script>
 <script>
 (() => {
   'use strict';
@@ -304,6 +336,8 @@
     wmi: 'The Windows (WMI) class each device reads this data from.',
     add: 'Add to your report. Columns from different views are lined up by device ID for you; no SQL needed.',
     remove: 'In your report. Click to remove it.',
+    ask: 'Make this a question the report asks when it runs (an SSRS parameter). What you typed here becomes the default answer.',
+    filter: 'Filter the report on this column, like "Model contains Latitude" or "last boot more than 30 days ago". The column doesn\'t have to be in the report.',
     hist: 'Inventory history: earlier values, kept each time inventory saw a change. Most reports want the matching v_GS_ view, which has the current values.',
   };
   // Columns that are too generic to be useful join hints
@@ -312,7 +346,7 @@
   const $ = (s) => document.querySelector(s);
   const esc = S.esc;
   const els = { q: $('#q'), showFn: $('#showFn'), syn: $('#syn'), chips: $('#chips'), results: $('#results'), detail: $('#detail'), stats: $('#stats'), footer: $('#footer'), toast: $('#toast'),
-    basket: $('#basket'), basketBtn: $('#basketBtn'), basketCount: $('#basketCount'), help: $('#help'), helpBtn: $('#helpBtn'), intro: $('#intro'), tip: $('#tip') };
+    basket: $('#basket'), basketBtn: $('#basketBtn'), basketCount: $('#basketCount'), help: $('#help'), helpBtn: $('#helpBtn'), sqlx: $('#sqlx'), sqlBtn: $('#sqlBtn'), sqlIn: $('#sqlIn'), sqlOut: $('#sqlOut'), intro: $('#intro'), tip: $('#tip') };
 
   let DB = null;            // { header, objects[], byName{}, colIndex{} }
   let state = { q: '', cat: '', fn: false, obj: '' };
@@ -506,6 +540,7 @@
     const from = o.kind === 'function' ? `${o.name}${paramSig || '(@UserSIDs)'}` : o.name;
     const sql = `SELECT\n  ${selectCols.join(',\n  ')}\nFROM ${from}`;
     const rv = reportView(o);   // the view these columns go into the report draft as (null: can't be added)
+    const fltBtn = (col) => `<button type="button" class="flt" data-filter="${esc(col)}" aria-label="Filter the report on ${esc(col)}" data-tip="${esc(TIP.filter)}"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1.5 2h13l-5 6v5l-3 1.5V8z" fill="currentColor"/></svg></button>`;
     const addBtn = (col) => {
       const on = rv && inReport(rv, col) >= 0;
       return `<button type="button" class="add" data-add="${esc(col)}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(col)} ${on ? 'from' : 'to'} report draft" data-tip="${esc(on ? TIP.remove : TIP.add)}">${on ? '✓' : '+'}</button>`;
@@ -519,7 +554,7 @@
     const colRow = (c) => {
       const off = o.offColumns.has(c.name);
       const about = VWhereColumns.describe(o.name, c.name);
-      return `<tr class="${[hits.has(c.name) ? 'hit' : '', off ? 'off' : ''].join(' ').trim()}">${rv ? `<td class="addcell">${addBtn(c.name)}</td>` : ''}<td class="mono">${highlight(c.name, hits.has(c.name) ? hl : [])}${off ? `<span class="tag" data-tip="${esc(TIP.offCol)}">not collected</span>` : ''}${about ? `<div class="cdesc">${esc(about)}</div>` : ''}</td><td class="mono ctype">${esc(c.type)}</td><td class="nullcell">${c.nullable ? 'yes' : ''}</td></tr>`;
+      return `<tr class="${[hits.has(c.name) ? 'hit' : '', off ? 'off' : ''].join(' ').trim()}">${rv ? `<td class="addcell">${addBtn(c.name)}${fltBtn(c.name)}</td>` : ''}<td class="mono">${highlight(c.name, hits.has(c.name) ? hl : [])}${off ? `<span class="tag" data-tip="${esc(TIP.offCol)}">not collected</span>` : ''}${about ? `<div class="cdesc">${esc(about)}</div>` : ''}</td><td class="mono ctype">${esc(c.type)}</td><td class="nullcell">${c.nullable ? 'yes' : ''}</td></tr>`;
     };
 
     els.detail.innerHTML = `
@@ -535,7 +570,7 @@
       </div>
       <section><h3>Columns</h3>
         ${legend ? `<p class="legend">${legend}</p>` : ''}
-        <table><thead><tr>${rv ? '<th data-tip="Add a column to your report.">+</th>' : ''}<th>Column</th><th data-tip="Kind of data: nvarchar = text, int or bigint = whole number, datetime = date and time, bit = yes/no.">Type</th><th class="nullcell" data-tip="yes = this column can be blank for some devices.">Null</th></tr></thead><tbody>
+        <table><thead><tr>${rv ? '<th data-tip="+ adds a column to your report. The funnel filters the report on it.">+</th>' : ''}<th>Column</th><th data-tip="Kind of data: nvarchar = text, int or bigint = whole number, datetime = date and time, bit = yes/no.">Type</th><th class="nullcell" data-tip="yes = this column can be blank for some devices.">Null</th></tr></thead><tbody>
         ${matched.map(colRow).join('')}
         ${split ? `<tr class="sep"><td colspan="${ncols}">Other columns</td></tr>` : ''}
         ${rest.map(colRow).join('')}
@@ -570,9 +605,9 @@
     try {
       const r = JSON.parse(localStorage.getItem(STORE) || 'null');
       if (r && Array.isArray(r.cols)) return { cols: r.cols, collection: r.collection !== false, rbac: !!r.rbac, keepOne: r.keepOne || [],
-        readable: r.readable !== false, skipUnknown: r.skipUnknown !== false, title: r.title || '', site: r.site || '' };
+        readable: r.readable !== false, skipUnknown: r.skipUnknown !== false, title: r.title || '', site: r.site || '', filters: Array.isArray(r.filters) ? r.filters : [] };
     } catch (e) { /* private window or blocked storage: start empty */ }
-    return { cols: [], collection: true, rbac: false, keepOne: [], readable: true, skipUnknown: true, title: '', site: '' };
+    return { cols: [], collection: true, rbac: false, keepOne: [], readable: true, skipUnknown: true, title: '', site: '', filters: [] };
   }
   function saveReport() { try { localStorage.setItem(STORE, JSON.stringify(report)); } catch (e) { /* not saved, still works */ } }
 
@@ -625,7 +660,7 @@
 
   function draft(force) {
     const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne,
-      readable: report.readable, skipUnknown: report.skipUnknown, skipObsolete: report.skipUnknown, ...force };
+      readable: report.readable, skipUnknown: report.skipUnknown, skipObsolete: report.skipUnknown, filters: report.filters, ...force };
     const p = VWhereJoin.plan(report.cols.map(c => c.view), lookup, opts);
     return { p, sql: VWhereJoin.toSQL(p, report.cols, lookup, opts) };
   }
@@ -643,7 +678,7 @@
     const typeOf = (view, col) => ((DB.byName[view] || { columns: [] }).columns.find(c => c.name === col) || {}).type;
     const columns = VWhereJoin.headers(p, report.cols, { readable: report.readable })
       .map(h => ({ name: h.name, type: h.outType || typeOf(h.view, h.column) }));
-    const xml = VWhereRDL.build({ title: report.title || 'Report draft', siteCode: site, sql, columns, collection: report.collection });
+    const xml = VWhereRDL.build({ title: report.title || 'Report draft', siteCode: site, sql, columns, collection: report.collection, params: p.params });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
     a.download = VWhereRDL.fileName(report.title);
@@ -662,8 +697,48 @@
     els.basket.hidden = !open;
     els.basketBtn.setAttribute('aria-expanded', String(open));
     if (open && !els.help.hidden) { els.help.hidden = true; els.helpBtn.setAttribute('aria-expanded', 'false'); }
+    if (open && !els.sqlx.hidden) { els.sqlx.hidden = true; els.sqlBtn.setAttribute('aria-expanded', 'false'); }
     if (open) { renderBasket(); els.basket.querySelector('.close').focus(); }
     else els.basketBtn.focus();
+  }
+
+  // Filters: one row each (column, condition, value, "ask when run"), plus a picker to add one.
+  // The column doesn't have to be in the report: the planner checks other views with EXISTS.
+  const colType = (view, col) => ((DB.byName[view] || { columns: [] }).columns.find(c => c.name === col) || {}).type;
+  function filtersSection(p) {
+    const rows = report.filters.map((f, i) => {
+      const kind = VWhereJoin.valueKind(colType(f.view, f.column));
+      const ops = VWhereJoin.OPS[kind];
+      const op = ops.find(o => o.id === f.op) || ops[0];
+      const planned = p.filters[i] || {};
+      const input = !op.value ? '<span></span>'
+        : `<input type="${op.value === 'date' ? 'date' : op.value === 'text' ? 'text' : 'number'}" ${op.value === 'days' ? 'min="0" step="1"' : ''} data-fval="${i}" value="${esc(f.value || '')}"
+            placeholder="${op.value === 'days' ? 'days' : op.value === 'number' ? 'number' : 'value'}" aria-label="Value for ${esc(f.column)}">`;
+      return `<div class="frow">
+        <span class="fcol">${esc(f.column)}<small>${esc(VWhereJoin.friendly(f.view))}</small></span>
+        <select data-fop="${i}" aria-label="Condition for ${esc(f.column)}">${ops.map(o => `<option value="${o.id}" ${o.id === op.id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
+        ${input}
+        ${op.value ? `<label class="ask" data-tip="${esc(TIP.ask)}"><input type="checkbox" data-fask="${i}" ${f.ask ? 'checked' : ''}> Ask</label>` : '<span></span>'}
+        <button type="button" data-frm="${i}" aria-label="Remove this filter" data-tip="Remove this filter">✕</button>
+        ${planned.problem ? `<div class="fproblem">${esc(planned.problem)}</div>` : ''}
+      </div>`;
+    }).join('');
+    const hub = DB.byName[VWhereJoin.HUB];
+    const seen = new Set();
+    const mine = report.cols.filter(c => { const k = c.view + '|' + c.column; if (seen.has(k)) return false; seen.add(k); return true; });
+    const picker = `<select class="fadd" data-fadd aria-label="Add a filter">
+        <option value="">+ Add a filter on…</option>
+        <optgroup label="Columns in this report">${mine.map(c => `<option value="${esc(c.view + '|' + c.column)}">${esc(c.column)} (${esc(VWhereJoin.friendly(c.view))})</option>`).join('')}</optgroup>
+        ${hub ? `<optgroup label="Devices (v_R_System)">${hub.columns.map(c => `<option value="${esc(hub.name + '|' + c.name)}">${esc(c.name)}</option>`).join('')}</optgroup>` : ''}
+      </select>`;
+    return `<section class="filters"><h3>Filters</h3>
+      <p class="legend">Only include rows that match. Tick <b>Ask</b> to have the report ask for the value when it runs. To filter on any other column, use the funnel next to it in a view.</p>
+      ${rows}${picker}</section>`;
+  }
+  function addFilter(view, column) {
+    const kind = VWhereJoin.valueKind(colType(view, column));
+    report.filters.push({ view, column, op: VWhereJoin.OPS[kind][0].id, value: '', ask: false });
+    reportChanged();
   }
 
   // The rows-multiply warning, right under the columns, with the one-click fixes that apply
@@ -695,11 +770,12 @@
         </tr>`).join('')}
         </tbody></table>
         ${multNote(p)}
+        ${filtersSection(p)}
         <section class="conn"><h3>How the tables are connected</h3>
           <p class="lead">To show these columns side by side, one row per ${p.anchor === VWhereJoin.HUB ? 'device' : 'user'}, v_Where lines the tables up by ID.
             In SQL that's called a join; it's written for you in the query below. ${p.anchor === VWhereJoin.HUB ? 'Devices' : 'Users'} with no data in a table still show, with blanks.
             <a class="link" data-help href="#" role="button">More in How it works</a></p>
-          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : s.role === 'multiply' ? 'stopline' : ''}">${esc(s.text)}</li>`).join('')}</ol>
+          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : s.role === 'multiply' ? 'stopline' : s.role === 'filter-where' ? 'filterline' : ''}">${esc(s.text)}</li>`).join('')}</ol>
         </section>
         <div class="opts">
           <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
@@ -737,11 +813,62 @@
   function dismissIntro() { try { localStorage.setItem(INTRO, '1'); } catch (e) { /* not remembered, still hidden for now */ } els.intro.hidden = true; }
   els.intro.hidden = introSeen();
 
+  // ---------- Explain a query ----------
+  function openSql(open) {
+    els.sqlx.hidden = !open;
+    els.sqlBtn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      for (const [p, b] of [[els.help, els.helpBtn], [els.basket, els.basketBtn]]) if (!p.hidden) { p.hidden = true; b.setAttribute('aria-expanded', 'false'); }
+      els.sqlIn.focus();
+    } else els.sqlBtn.focus();
+  }
+  function renderSql() {
+    const sql = els.sqlIn.value;
+    if (!DB || !sql.trim()) { els.sqlOut.innerHTML = ''; return; }
+    const a = VWhereSQL.analyze(sql, DB);
+    if (!a.objects.length) {
+      els.sqlOut.innerHTML = '<p class="legend">No ConfigMgr views or fn_rbac_ functions found. Names starting with v_ or fn_rbac_ are what it looks for.</p>';
+      return;
+    }
+    const rowsHint = (o) => {
+      const v = o.kind === 'function' && o.baseView ? o.baseView : o.name;
+      if (v === VWhereJoin.HUB || VWhereJoin.ONE_ROW.has(v)) return 'one row per device';
+      const k = VWhereJoin.classify(v, new Set(o.columns.map(c => c.name)));
+      return k.device ? 'can have several rows per device' : k.user ? 'keyed by user' : k.ci ? 'keyed by update or configuration item' : k.coll ? 'keyed by collection' : '';
+    };
+    const checks = a.checks.map(c => `<div class="note ${c.level === 'stop' ? 'stop' : c.level === 'warn' ? 'warn' : ''}">${esc(c.text)}</div>`).join('');
+    const views = a.objects.map(e => {
+      if (!e.known) return `<li><code>${esc(e.name)}</code> <span class="tag warn">not in this schema</span></li>`;
+      const o = e.o;
+      const bits = [o.cat, rowsHint(o), e.aliases.length ? 'as ' + e.aliases.join(', ') : '', o.kind === 'function' ? 'permission-filtered' : o.rbacFn ? 'has fn_rbac_' : 'no fn_rbac_ version']
+        .filter(Boolean).join(' · ');
+      return `<li><a class="link" data-go="${esc(o.name)}">${esc(o.name)}</a> <span class="desc">${esc(VWhereJoin.friendly(o.kind === 'function' && o.baseView ? o.baseView : o.name))}</span>
+        ${o.hinv && !o.hinv.collected ? `<span class="tag warn" data-tip="${esc(TIP.off)}">not collected by default</span>` : ''}
+        ${o.cat === 'Inventory history' ? `<span class="tag hist" data-tip="${esc(TIP.hist)}">history</span>` : ''}
+        <div class="meta">${esc(bits)}</div></li>`;
+    }).join('');
+    const cols = a.columns.length ? `<h3>Columns (${a.columns.length})</h3><table class="xcols"><tbody>${a.columns.map(c =>
+      `<tr><td class="mono">${esc(c.alias)}.${esc(c.column)}</td><td class="${c.known === false ? 'bad' : ''}">${
+        c.known === false ? `Not a column of ${esc(c.object)}` : c.known === null ? `${esc(c.object)} isn't in this schema` : esc(c.about || `${c.type || ''} in ${c.object}`)}</td></tr>`).join('')}</tbody></table>` : '';
+    const rb = VWhereSQL.toRbac(sql, DB), pl = VWhereSQL.toPlain(sql, DB);
+    const conv = [];
+    if (rb.converted.length) conv.push(`<h3>SSRS version</h3>
+      <p class="legend">${rb.converted.length} view${rb.converted.length === 1 ? '' : 's'} switched to ${rb.converted.length === 1 ? 'its' : 'their'} <code>fn_rbac_</code> version with <code>@UserSIDs</code>, so the report only shows what each person's console role allows.
+        ${rb.noRbac.length ? `No permission-filtered version exists for ${esc(rb.noRbac.join(', '))}; left as is.` : ''} A downloaded v_Where .rdl sets up <code>@UserSIDs</code>; in Report Builder, copy the two hidden parameters from a built-in ConfigMgr report.</p>
+      <pre class="sql" id="sqlRbac">${esc(rb.sql)}</pre><div class="actions"><button type="button" data-xcopy="sqlRbac">Copy SSRS version</button></div>`);
+    if (pl.converted.length) conv.push(`<h3>Plain version, for SSMS</h3>
+      <p class="legend">The <code>fn_rbac_</code> functions switched back to plain views, so it runs in SQL Server Management Studio without <code>@UserSIDs</code>.</p>
+      <pre class="sql" id="sqlPlain">${esc(pl.sql)}</pre><div class="actions"><button type="button" data-xcopy="sqlPlain">Copy plain version</button></div>`);
+    els.sqlOut.innerHTML = `${checks ? `<h3>Checks</h3>${checks}` : '<h3>Checks</h3><p class="legend">Nothing to flag.</p>'}
+      <h3>Views (${a.objects.length})</h3><ul class="xviews">${views}</ul>${cols}${conv.join('')}`;
+  }
+
   function openHelp(open) {
     els.help.hidden = !open;
     els.helpBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       if (!els.basket.hidden) { els.basket.hidden = true; els.basketBtn.setAttribute('aria-expanded', 'false'); }
+      if (!els.sqlx.hidden) { els.sqlx.hidden = true; els.sqlBtn.setAttribute('aria-expanded', 'false'); }
       els.help.querySelector('.close').focus();
     } else els.helpBtn.focus();
   }
@@ -816,6 +943,19 @@
     if (phone.matches) els.detail.scrollIntoView({ block: 'start' });
   });
   els.detail.addEventListener('click', e => {
+    const flt = e.target.closest('button[data-filter]');
+    if (flt) {
+      const rv = reportView(DB.byName[state.obj]);
+      if (!rv) return;
+      addFilter(rv, flt.dataset.filter);
+      openBasket(true);
+      const rows = els.basket.querySelectorAll('.filters .frow');
+      const last = rows[rows.length - 1];
+      const target = last && (last.querySelector('[data-fval]') || last.querySelector('[data-fop]'));
+      if (target) { last.scrollIntoView({ block: 'center' }); target.focus(); }
+      toast(`Filter added on ${flt.dataset.filter}. Set it in Report draft.`);
+      return;
+    }
     const add = e.target.closest('button[data-add]');
     if (add) {
       const rv = reportView(DB.byName[state.obj]);
@@ -828,6 +968,16 @@
 
   // How it works
   els.helpBtn.addEventListener('click', () => openHelp(els.help.hidden));
+  els.sqlBtn.addEventListener('click', () => openSql(els.sqlx.hidden));
+  els.sqlx.querySelector('.close').addEventListener('click', () => openSql(false));
+  let sqlTimer;
+  els.sqlIn.addEventListener('input', () => { clearTimeout(sqlTimer); sqlTimer = setTimeout(renderSql, 200); });
+  els.sqlx.addEventListener('click', e => {
+    const go = e.target.closest('[data-go]');
+    if (go) { e.preventDefault(); openSql(false); goTo(go.dataset.go); return; }
+    const cp = e.target.closest('[data-xcopy]');
+    if (cp) copy(document.getElementById(cp.dataset.xcopy).textContent, 'Copied');
+  });
   els.help.querySelector('.close').addEventListener('click', () => openHelp(false));
   els.intro.addEventListener('click', e => {
     const b = e.target.closest('button[data-intro]'); if (!b) return;
@@ -848,6 +998,7 @@
     if (d.up) { const i = +d.up; [cols[i - 1], cols[i]] = [cols[i], cols[i - 1]]; }
     else if (d.down) { const i = +d.down; [cols[i + 1], cols[i]] = [cols[i], cols[i + 1]]; }
     else if (d.rm) cols.splice(+d.rm, 1);
+    else if (d.frm !== undefined) report.filters.splice(+d.frm, 1);
     else if (d.keep) report.keepOne = [...new Set(report.keepOne.concat(d.keep))];
     else if (d.unkeep) report.keepOne = report.keepOne.filter(v => v !== d.unkeep);
     else if ('copysql' in d) return copy(draft().sql, 'Query copied');
@@ -855,14 +1006,25 @@
     else if ('clear' in d) {
       // Two clicks to clear, so a stray click doesn't wipe the draft
       if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Click again to clear'; return; }
-      report.cols = []; report.keepOne = [];
+      report.cols = []; report.keepOne = []; report.filters = [];
     } else return;
     reportChanged();
     syncAddButtons();
   });
   els.basket.addEventListener('change', e => {
-    const opt = e.target.dataset.opt;
-    if (opt) { report[opt] = e.target.checked; reportChanged(); }
+    const d = e.target.dataset;
+    if (d.opt) { report[d.opt] = e.target.checked; reportChanged(); return; }
+    if (d.fop !== undefined) { report.filters[+d.fop].op = e.target.value; reportChanged(); return; }
+    if (d.fask !== undefined) { report.filters[+d.fask].ask = e.target.checked; reportChanged(); return; }
+    if (d.fval !== undefined) { report.filters[+d.fval].value = e.target.value.trim(); reportChanged(); return; }
+    if ('fadd' in d && e.target.value) {
+      const [view, column] = e.target.value.split('|');
+      addFilter(view, column);
+      const rows = els.basket.querySelectorAll('.filters .frow');
+      const last = rows[rows.length - 1];
+      const target = last && (last.querySelector('[data-fval]') || last.querySelector('[data-fop]'));
+      if (target) target.focus();
+    }
   });
   els.basket.addEventListener('input', e => {
     const meta = e.target.dataset.meta;
@@ -870,6 +1032,13 @@
       report[meta] = meta === 'site' ? e.target.value.trim().toUpperCase() : e.target.value;
       e.target.classList.remove('need');
       saveReport();
+      return;
+    }
+    if (e.target.dataset.fval !== undefined) {
+      report.filters[+e.target.dataset.fval].value = e.target.value.trim();
+      saveReport();
+      const pre = els.basket.querySelector('pre.sql');
+      if (pre) pre.textContent = draft().sql;    // query only while typing; the rest updates when the box loses focus
       return;
     }
     const i = e.target.dataset.label;
@@ -883,6 +1052,7 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') hideTip();
     if (e.key === 'Escape' && !els.help.hidden) { openHelp(false); return; }
+    if (e.key === 'Escape' && !els.sqlx.hidden) { openSql(false); return; }
     if (e.key === 'Escape' && !els.basket.hidden) { openBasket(false); return; }
     const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox';
     if (e.key === '/' && !typing) { e.preventDefault(); els.q.focus(); els.q.select(); return; }

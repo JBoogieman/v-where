@@ -231,6 +231,70 @@ test('skipObsolete does nothing on a user-only report',
   [C('v_R_User', 'Mail0')], { skipObsolete: true },
   (p, sql) => assert.doesNotMatch(sql, /Obsolete0/));
 
+// ---- Filters and report parameters ----
+const F = (view, column, op, value, ask) => ({ view, column, op, value, ask });
+test('filter: a column already in the report is filtered in place',
+  [C('v_R_System', 'Name0'), C('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0')], { filters: [F('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0', 'olderdays', '30')] },
+  (p, sql) => { assert.match(sql, /^WHERE os\.LastBootUpTime0 < DATEADD\(day, -30, GETDATE\(\)\)$/m); assert.doesNotMatch(sql, /EXISTS/); });
+
+test('filter: a view not in the report is checked with EXISTS, so it never repeats a device',
+  [C('v_R_System', 'Name0')], { filters: [F('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0', 'contains', 'Office')] },
+  (p, sql) => {
+    assert.match(sql, /^WHERE EXISTS \(SELECT 1 FROM v_GS_ADD_REMOVE_PROGRAMS flt1 WHERE flt1\.ResourceID = sys\.ResourceID AND flt1\.DisplayName0 LIKE N'%' \+ N'Office' \+ N'%'\)$/m);
+    assert.ok(!p.joins.some(j => j.view === 'v_GS_ADD_REMOVE_PROGRAMS'), 'filter view was joined');
+    assert.ok(!p.warnings.some(w => w.multiply));
+  });
+
+test('filter: EXISTS uses the fn_rbac_ version in the SSRS query',
+  [C('v_R_System', 'Name0')], { rbac: true, filters: [F('v_GS_COMPUTER_SYSTEM', 'Model0', 'starts', 'Latitude')] },
+  (p, sql) => assert.match(sql, /EXISTS \(SELECT 1 FROM fn_rbac_GS_COMPUTER_SYSTEM\(@UserSIDs\) flt1 WHERE/));
+
+test('filter: "ask" makes a report parameter, with a DECLARE hint for SSMS',
+  [C('v_R_System', 'Name0')], { collection: true, filters: [F('v_GS_COMPUTER_SYSTEM', 'Model0', 'contains', 'Latitude', true), F('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0', 'olderdays', '30', true)] },
+  (p, sql) => {
+    assert.deepStrictEqual(p.params.map(q => [q.name, q.rdl, q.default]), [['Model', 'String', 'Latitude'], ['LastBootUpTimeDays', 'Integer', '30']]);
+    assert.match(sql, /LIKE N'%' \+ @Model \+ N'%'/);
+    assert.match(sql, /DATEADD\(day, -@LastBootUpTimeDays, GETDATE\(\)\)/);
+    assert.match(sql, /^-- DECLARE @CollectionID nvarchar\(8\) = 'SMS00001';$/m);
+    assert.match(sql, /^-- DECLARE @Model nvarchar\(4000\) = N'Latitude';$/m);
+    assert.match(sql, /^-- DECLARE @LastBootUpTimeDays int = 30;$/m);
+  });
+
+test('filter: values are quoted safely; bad numbers and dates are left out with a reason',
+  [C('v_R_System', 'Name0')], { filters: [F('v_R_System', 'Name0', 'eq', "O'Brien-PC"), F('v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0', 'lt', '8GB; DROP TABLE x'), F('v_GS_OPERATING_SYSTEM', 'InstallDate0', 'before', 'yesterday')] },
+  (p, sql) => {
+    assert.match(sql, /sys\.Name0 = N'O''Brien-PC'/);
+    assert.doesNotMatch(sql, /DROP|yesterday/);
+    assert.deepStrictEqual(p.filters.filter(f => f.problem).map(f => f.problem), ['Needs a number.', 'Needs a date.']);
+  });
+
+test('filter: every op for every kind of column gives SQL',
+  [C('v_R_System', 'Name0')], {},
+  () => {
+    const cases = { text: ['v_R_System', 'Name0', 'x'], number: ['v_GS_X86_PC_MEMORY', 'TotalPhysicalMemory0', '8'],
+      date: ['v_GS_OPERATING_SYSTEM', 'LastBootUpTime0', null], bit: ['v_FullCollectionMembership', 'IsDirect', ''] };
+    for (const [kind, [view, column, value]] of Object.entries(cases)) {
+      assert.strictEqual(J.valueKind(byName[view].types[column]), kind, `${view}.${column} is ${kind}`);
+      for (const op of J.OPS[kind]) {
+        const v = op.value === 'date' ? '2026-01-01' : op.value === 'days' ? '30' : value;
+        const p = J.plan(['v_R_System'], lookup, { filters: [F(view, column, op.id, v)] });
+        assert.ok(p.filters[0].cond, `${kind} ${op.id}: ${p.filters[0].problem}`);
+      }
+    }
+  });
+
+test('filter: explain() says what each filter does',
+  [C('v_R_System', 'Name0')], { filters: [F('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0', 'contains', 'Office'), F('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0', 'olderdays', '30', true)] },
+  (p) => {
+    const t = J.explain(p).filter(e => e.role === 'filter-where').map(e => e.text);
+    assert.match(t[0], /^Only devices where Display Name contains "Office", checked in Installed programs \(32-bit\) without adding its rows/);
+    assert.match(t[1], /^Only devices where Last Boot Up Time is more than N \(asked when the report runs, default 30\) days ago, checked in Operating System/);
+  });
+
+test('filter: a view with no device key explains how to filter on it instead',
+  [C('v_R_System', 'Name0')], { filters: [F('v_UpdateInfo', 'ArticleID', 'eq', '5031354')] },
+  (p, sql) => { assert.match(p.filters[0].problem, /isn't linked to devices directly/); assert.doesNotMatch(sql, /ArticleID/); });
+
 // ---- Plain-English explanation of the connections ----
 const said = (p) => J.explain(p).map(e => e.text);
 test('explain: one sentence per table, in query order, plus the Unknown Computer filter',

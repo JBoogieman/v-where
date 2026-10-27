@@ -24,7 +24,7 @@ function makeReport(cols, opts, title) {
   const p = J.plan(cols.map(c => c.view), lookup, o);
   const sql = J.toSQL(p, cols, lookup, o);
   const columns = J.headers(p, cols, o).map(h => ({ name: h.name, type: h.outType || byName[h.view].types[h.column] }));
-  return R.build({ title, siteCode: 'lab', sql, columns, collection: o.collection });
+  return R.build({ title, siteCode: 'lab', sql, columns, collection: o.collection, params: p.params });
 }
 
 // Minimal XML check: tags balance and nest, no raw & or < in text. Enough to catch builder slips.
@@ -122,9 +122,28 @@ test('type mapping', () => {
   assert.strictEqual(R.netType(undefined), 'System.String');
 });
 
+// Filters with "ask" become report parameters
+const asked = (() => {
+  const cols = [C('v_R_System', 'Name0', 'Device'), C('v_GS_OPERATING_SYSTEM', 'LastBootUpTime0')];
+  const filters = [{ view: 'v_GS_COMPUTER_SYSTEM', column: 'Model0', op: 'contains', value: 'Latitude', ask: true },
+    { view: 'v_GS_OPERATING_SYSTEM', column: 'LastBootUpTime0', op: 'olderdays', value: '30', ask: true },
+    { view: 'v_GS_OPERATING_SYSTEM', column: 'InstallDate0', op: 'before', value: '', ask: true }];
+  return makeReport(cols, { collection: true, filters }, 'Old boots');
+})();
+test('filter parameters: declared, defaulted, bound to the query and shown in the subtitle', () => {
+  wellFormed(asked);
+  assert.match(asked, /<ReportParameter Name="Model">\s*<DataType>String<\/DataType>\s*<DefaultValue><Values><Value>Latitude<\/Value><\/Values><\/DefaultValue>\s*<AllowBlank>true<\/AllowBlank>\s*<Prompt>Model<\/Prompt>/);
+  assert.match(asked, /<ReportParameter Name="LastBootUpTimeDays">\s*<DataType>Integer<\/DataType>\s*<DefaultValue><Values><Value>30<\/Value>/);
+  assert.match(asked, /<ReportParameter Name="InstallDate">\s*<DataType>DateTime<\/DataType>\s*<Nullable>true<\/Nullable>/);
+  assert.match(asked, /<QueryParameter Name="@Model"><Value>=Parameters!Model\.Value<\/Value><\/QueryParameter>/);
+  assert.match(asked, /<QueryParameter Name="@LastBootUpTimeDays"><Value>=Parameters!LastBootUpTimeDays\.Value<\/Value><\/QueryParameter>/);
+  assert.match(asked, /&quot;Model: &quot; &amp; Parameters!Model\.Value/);
+  assert.ok(asked.indexOf('<ReportParameter Name="CollectionID">') < asked.indexOf('<ReportParameter Name="Model">'), 'collection first');
+});
+
 if (WRITE) {
   fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
-  for (const [n, x] of Object.entries({ full, plain, weird, readable })) fs.writeFileSync(path.join(ROOT, 'dist', `sample_${n}.rdl`), x);
+  for (const [n, x] of Object.entries({ full, plain, weird, readable, asked })) fs.writeFileSync(path.join(ROOT, 'dist', `sample_${n}.rdl`), x);
   console.log('wrote dist/sample_*.rdl');
 }
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}`);
