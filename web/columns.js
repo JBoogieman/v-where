@@ -94,6 +94,7 @@
     'v_GS_COMPUTER_SYSTEM.SystemType0': 'Platform, like "x64-based PC".',
     'v_GS_COMPUTER_SYSTEM.NumberOfProcessors0': 'Number of CPU sockets (not cores).',
     'v_GS_COMPUTER_SYSTEM.TotalPhysicalMemory0': 'Memory as this class reports it. For reports, v_GS_X86_PC_MEMORY.TotalPhysicalMemory0 is the usual source.',
+    'v_GS_COMPUTER_SYSTEM.CurrentTimeZone0': 'Offset from UTC, in minutes, like -360 for US Central. Daylight saving time can shift it by 60.',
     'v_GS_COMPUTER_SYSTEM_PRODUCT.Version0': 'Model name on Lenovo, like "ThinkPad T14 Gen 3". Other makers often repeat the model or leave a version here.',
     'v_GS_COMPUTER_SYSTEM_PRODUCT.IdentifyingNumber0': 'Serial number.',
     'v_GS_COMPUTER_SYSTEM_PRODUCT.Name0': 'Model.',
@@ -114,6 +115,8 @@
     'v_GS_PROCESSOR.NumberOfLogicalProcessors0': 'Threads in this CPU.',
     'v_GS_PROCESSOR.MaxClockSpeed0': 'Top rated speed, in MHz.',
     'v_GS_PROCESSOR.DeviceID0': 'CPU socket, like CPU0. One row per socket.',
+    'v_GS_VIDEO_CONTROLLER.Name0': 'Graphics adapter, like "Intel(R) Iris(R) Xe Graphics". One row per adapter.',
+    'v_GS_VIDEO_CONTROLLER.DriverVersion0': 'Graphics driver version.',
     'v_GS_FIRMWARE.UEFI0': '1 = UEFI, 0 = legacy BIOS.',
     'v_GS_FIRMWARE.SecureBoot0': '1 = Secure Boot is on.',
     'v_GS_TPM.SpecVersion0': 'TPM version, starting with 1.2 or 2.0.',
@@ -167,6 +170,11 @@
     'v_GS_QUICK_FIX_ENGINEERING.HotFixID0': 'KB number, like KB5031354.',
     'v_GS_QUICK_FIX_ENGINEERING.InstalledOn0': 'Install date as Windows reports it (text).',
     'v_GS_QUICK_FIX_ENGINEERING.Description0': 'Kind of update: Update, Security Update...',
+
+    // Services
+    'v_GS_SERVICE.Name0': 'Service\'s short name, like wuauserv.',
+    'v_GS_SERVICE.DisplayName0': 'Name as the Services console shows it, like "Windows Update".',
+    'v_GS_SERVICE.StartMode0': 'Startup type: Auto, Manual or Disabled.',
 
     // Usage and client health
     'v_GS_SYSTEM_CONSOLE_USAGE.TopConsoleUser0': 'User with the most time signed in at the device, from the Windows security log.',
