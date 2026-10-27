@@ -73,6 +73,7 @@
    *   sql         the dataset query (use the fn_rbac_ / @UserSIDs version)
    *   columns     [{ name, type }] : name = the column alias in the query, type = SQL type
    *   collection  true if the query uses @CollectionID
+   *   params      [{ name, prompt, default, rdl }] filter parameters the query uses (@name); rdl = SSRS data type
    */
   function build(opts) {
     const title = (opts.title || 'Report draft').trim();
@@ -109,7 +110,9 @@
         <Field Name="Name"><DataField>Name</DataField><rd:TypeName>System.String</rd:TypeName></Field>
       </Fields>
     </DataSet>`);
-    const qp = [userSidsParam, coll ? `<QueryParameter Name="@CollectionID"><Value>=Parameters!CollectionID.Value</Value></QueryParameter>` : ''].join('');
+    const fparams = (opts.params || []).filter(p => new RegExp('@' + p.name + '\\b', 'i').test(sql));
+    const qp = [userSidsParam, coll ? `<QueryParameter Name="@CollectionID"><Value>=Parameters!CollectionID.Value</Value></QueryParameter>` : '',
+      ...fparams.map(p => `<QueryParameter Name="@${x(p.name)}"><Value>=Parameters!${x(p.name)}.Value</Value></QueryParameter>`)].join('');
     sets.push(`<DataSet Name="Main">
       <Query>
         <DataSourceName>${DS_NAME}</DataSourceName>
@@ -154,6 +157,7 @@
         <Style><Border><Style>None</Style></Border></Style>
       </Tablix>`;
     const subtitle = (coll ? '="Collection: " & Parameters!CollectionID.Label & "   |   " & ' : '=')
+      + fparams.map(p => `"${p.prompt.replace(/"/g, '""')}: " & Parameters!${p.name}.Value & "   |   " & `).join('')
       + 'CountRows("Main") & " rows   |   " & Format(Globals!ExecutionTime, "g")';
 
     // ---- Parameters ----
@@ -174,6 +178,13 @@
       <DefaultValue><Values><Value>${ALL_SYSTEMS}</Value></Values></DefaultValue>
       <Prompt>Collection</Prompt>
       <ValidValues><DataSetReference><DataSetName>Collections</DataSetName><ValueField>CollectionID</ValueField><LabelField>Name</LabelField></DataSetReference></ValidValues>
+    </ReportParameter>`);
+    // Filter parameters: the report asks for each, with the value typed in v_Where as the default
+    for (const p of fparams) params.push(`<ReportParameter Name="${x(p.name)}">
+      <DataType>${x(p.rdl || 'String')}</DataType>
+      ${p.default !== '' && p.default != null ? `<DefaultValue><Values><Value>${x(p.default)}</Value></Values></DefaultValue>` : ''}
+      ${(p.rdl || 'String') === 'String' ? '<AllowBlank>true</AllowBlank>' : '<Nullable>true</Nullable>'}
+      <Prompt>${x(p.prompt || p.name)}</Prompt>
     </ReportParameter>`);
 
     return `<?xml version="1.0" encoding="utf-8"?>

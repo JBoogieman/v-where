@@ -159,6 +159,90 @@
   }
 
   // What keys does a view carry? `cols` is a Set of column names.
+  // ---------- Filters ----------
+  // A filter is { view, column, op, value, ask }. ask = make it a report parameter: SSRS asks for the value when
+  // the report runs, with `value` as the default. Conditions work on the raw column (codes, not readable values).
+  //   kind of value: text, number, date, bit (from the column's SQL type)
+  //   op.value: what the op needs: 'text' | 'number' | 'days' | 'date' | null (nothing to type)
+  const OPS = {
+    text: [
+      { id: 'contains', label: 'contains', value: 'text' }, { id: 'starts', label: 'starts with', value: 'text' },
+      { id: 'eq', label: 'is', value: 'text' }, { id: 'ne', label: 'is not', value: 'text' },
+      { id: 'notcontains', label: "doesn't contain", value: 'text' },
+      { id: 'blank', label: 'is blank', value: null }, { id: 'notblank', label: "isn't blank", value: null },
+    ],
+    number: [
+      { id: 'eq', label: '=', value: 'number' }, { id: 'ne', label: '≠', value: 'number' },
+      { id: 'gt', label: '>', value: 'number' }, { id: 'ge', label: '≥', value: 'number' },
+      { id: 'lt', label: '<', value: 'number' }, { id: 'le', label: '≤', value: 'number' },
+      { id: 'blank', label: 'is blank', value: null }, { id: 'notblank', label: "isn't blank", value: null },
+    ],
+    date: [
+      { id: 'olderdays', label: 'more than N days ago', value: 'days' }, { id: 'withindays', label: 'in the last N days', value: 'days' },
+      { id: 'before', label: 'before', value: 'date' }, { id: 'onafter', label: 'on or after', value: 'date' },
+      { id: 'blank', label: 'is blank', value: null }, { id: 'notblank', label: "isn't blank", value: null },
+    ],
+    bit: [
+      { id: 'yes', label: 'is Yes (1)', value: null }, { id: 'no', label: 'is No (0 or blank)', value: null },
+      { id: 'blank', label: 'is blank', value: null },
+    ],
+  };
+  function valueKind(sqlType) {
+    const t = String(sqlType || '').toLowerCase();
+    if (/^bit/.test(t)) return 'bit';
+    if (/date|time/.test(t) && !/timestamp/.test(t)) return 'date';
+    if (/^(tiny|small|big)?int|^decimal|^numeric|^float|^real|^money|^smallmoney/.test(t)) return 'number';
+    return 'text';
+  }
+  const opOf = (kind, id) => OPS[kind].find(o => o.id === id) || OPS[kind][0];
+  // "LastBootUpTime0" -> "LastBootUpTime", unique, never one of the parameters ConfigMgr reports already use
+  function paramName(column, op, used) {
+    const base = (label(column).replace(/[^A-Za-z0-9]+/g, '') || 'Value') + (op.value === 'days' ? 'Days' : '');
+    let n = /^[0-9]/.test(base) ? 'P' + base : base, i = 2;
+    while (used.has(n.toLowerCase())) n = base + i++;
+    used.add(n.toLowerCase());
+    return n;
+  }
+  // The value as SQL: a parameter, or a checked literal. null = not usable (empty or not a valid number/date).
+  function filterValue(op, raw, param) {
+    if (param) return '@' + param;
+    const v = String(raw == null ? '' : raw).trim();
+    if (op.value === 'text') return v === '' ? null : `N'${v.replace(/'/g, "''")}'`;
+    if (op.value === 'number') return /^-?\d+(\.\d+)?$/.test(v) ? v : null;
+    if (op.value === 'days') return /^\d+$/.test(v) ? v : null;
+    if (op.value === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `'${v}'` : null;
+    return '';
+  }
+  function filterCond(op, kind, ref, val) {
+    switch (op.id) {
+      case 'contains': return `${ref} LIKE N'%' + ${val} + N'%'`;
+      case 'starts': return `${ref} LIKE ${val} + N'%'`;
+      case 'notcontains': return `ISNULL(${ref}, N'') NOT LIKE N'%' + ${val} + N'%'`;
+      case 'eq': return `${ref} = ${val}`;
+      case 'ne': return kind === 'text' ? `ISNULL(${ref}, N'') <> ${val}` : `${ref} <> ${val}`;
+      case 'gt': return `${ref} > ${val}`;
+      case 'ge': return `${ref} >= ${val}`;
+      case 'lt': return `${ref} < ${val}`;
+      case 'le': return `${ref} <= ${val}`;
+      case 'olderdays': return `${ref} < DATEADD(day, -${val}, GETDATE())`;
+      case 'withindays': return `${ref} >= DATEADD(day, -${val}, GETDATE())`;
+      case 'before': return `${ref} < ${val}`;
+      case 'onafter': return `${ref} >= ${val}`;
+      case 'blank': return kind === 'text' ? `(${ref} IS NULL OR ${ref} = N'')` : `${ref} IS NULL`;
+      case 'notblank': return kind === 'text' ? `${ref} <> N''` : `${ref} IS NOT NULL`;
+      case 'yes': return `${ref} = 1`;
+      case 'no': return `ISNULL(${ref}, 0) = 0`;
+    }
+    return null;
+  }
+  // SQL type a parameter is declared as (for SSMS) and its SSRS data type
+  function paramTypes(op, sqlType) {
+    if (op.value === 'days') return { sql: 'int', rdl: 'Integer' };
+    if (op.value === 'date') return { sql: 'date', rdl: 'DateTime' };
+    if (op.value === 'number') return /int/i.test(sqlType || '') ? { sql: 'int', rdl: 'Integer' } : { sql: 'decimal(18,4)', rdl: 'Float' };
+    return { sql: 'nvarchar(4000)', rdl: 'String' };
+  }
+
   function classify(name, cols) {
     const isUser = USER_VIEW.test(name);
     return {
@@ -177,8 +261,10 @@
    *   opts.keepOne     views whose "keep one row per device" fix (PICK_ONE) goes into the join
    *   opts.skipUnknown leave out the Unknown Computer placeholder records (device reports)
    *   opts.skipObsolete leave out obsolete and decommissioned records, which duplicate a current one (device reports)
+   *   opts.filters     [{ view, column, op, value, ask }] WHERE conditions. A view already in the report is filtered in
+   *                    place; any other view linked to devices is checked with EXISTS, so it can't repeat a device.
    * lookup may also return types: { column: sqlType }, used for readable values (opts.readable in toSQL)
-   * Returns { anchor, from, joins[], alias{}, warnings[], unplaced[], where[], whereWhy[] }
+   * Returns { anchor, from, joins[], alias{}, warnings[], unplaced[], where[], whereWhy[], filters[], params[] }
    *   warnings[]: per view { view, text, fix?, kept? }, plus at most one { view: null, multiply: true, views[], text }
    *   when two or more tables can each repeat a device: their rows multiply.
    *   from / joins[i]: { view, alias, type: 'JOIN' | 'LEFT JOIN', on, role: 'hub'|'filter'|'bridge'|'data' }
@@ -302,7 +388,43 @@
       if (opts.skipObsolete) { where.push(`ISNULL(${A}.Obsolete0, 0) = 0`, `ISNULL(${A}.Decommissioned0, 0) = 0`); whereWhy.push('obsolete'); }
     }
 
-    return { anchor, from, joins, alias, warnings, unplaced, where, whereWhy };
+    // 8) Filters. Placed after the joins so a filter on a view in the report uses that view's alias.
+    const filters = [], params = [];
+    const usedParams = new Set(['usersids', 'usertokensids', 'collectionid']);
+    let fx = 0;
+    for (const f of opts.filters || []) {
+      const v = lookup(f.view);
+      const base = { view: f.view, column: f.column, spec: f };
+      if (!v || !v.columns.includes(f.column)) { filters.push({ ...base, problem: `${f.view}.${f.column} isn't in this schema.` }); continue; }
+      const type = (v.types || {})[f.column];
+      const kind = valueKind(type);
+      const op = opOf(kind, f.op);
+      let ref, exists = null;
+      if (f.view === anchor) ref = `${A}.${f.column}`;
+      else if (joins.some(j => j.view === f.view)) ref = `${alias[f.view]}.${f.column}`;
+      else {
+        const keys = classify(f.view, new Set(v.columns));
+        const key = userOnly ? keys.user : keys.device;
+        if (!key) {
+          filters.push({ ...base, kind, op, problem: `${friendly(f.view)} (${f.view}) isn't linked to ${perWhat}s directly. Add one of its columns to the report to filter on it.` });
+          continue;
+        }
+        const fa = 'flt' + (++fx);
+        exists = { view: f.view, alias: fa, key };
+        ref = `${fa}.${f.column}`;
+      }
+      const param = f.ask && op.value ? paramName(f.column, op, usedParams) : null;
+      const val = filterValue(op, f.value, param);
+      if (op.value && val === null) {
+        filters.push({ ...base, kind, op, problem: op.value === 'date' ? 'Needs a date.' : op.value === 'days' ? 'Needs a number of days.' : op.value === 'number' ? 'Needs a number.' : 'Needs a value.' });
+        continue;
+      }
+      const cond = filterCond(op, kind, ref, val);
+      if (param) params.push({ name: param, prompt: label(f.column) + (op.value === 'days' ? ' (days ago)' : ''), default: String(f.value == null ? '' : f.value).trim(), ...paramTypes(op, type) });
+      filters.push({ ...base, kind, op, type, cond, exists, param });
+    }
+
+    return { anchor, from, joins, alias, warnings, unplaced, where, whereWhy, filters, params };
   }
 
   // "LastBootUpTime0" -> "Last Boot Up Time", "Name0" on v_R_System -> "Name"
@@ -328,6 +450,15 @@
   const friendly = (view) => FRIENDLY[view] || viewLabel(view);
   // What each bridge connects, for the sentence that explains why it was added
   const BRIDGE_WHAT = { user: 'users to devices', update: 'updates to devices', ci: 'configuration items to devices', collection: 'collections to devices' };
+
+  // "Last Boot Up Time more than 30 days ago", "Model contains a value asked when the report runs (default "Latitude")"
+  function filterText(f) {
+    const col = label(f.column), v = String(f.spec.value == null ? '' : f.spec.value).trim();
+    if (!f.op.value) return `${col} ${f.op.label}`;
+    const asked = f.param ? `asked when the report runs${v ? `, default ${v}` : ''}` : '';
+    if (f.op.value === 'days') return `${col} is ${f.op.label.replace('N', f.param ? `N (${asked})` : v)}`;
+    return `${col} ${f.op.value === 'date' ? 'is ' : ''}${f.op.label} ${f.param ? `a value ${asked}` : f.op.value === 'text' ? `"${v}"` : v}`;
+  }
 
   /**
    * explain(plan) -> [{ view, role, text }] : one plain-English sentence per table in the query, in query order,
@@ -360,6 +491,11 @@
     if (m) {
       out.push({ view: null, role: 'multiply',
         text: `Watch out: ${m.views.map(friendly).join(' and ')} each repeat a ${perWhat}, so together they multiply. A ${perWhat} shows once for every combination of their rows.` });
+    }
+    for (const f of p.filters || []) {
+      if (f.problem) continue;
+      out.push({ view: f.view, role: 'filter-where',
+        text: `Only ${perWhat}s where ${filterText(f)}${f.exists ? `, checked in ${friendly(f.view)} without adding its rows (so it can't repeat a ${perWhat})` : ''}.` });
     }
     const why = p.whereWhy || (p.where && p.where.length ? ['unknown'] : []);
     if (why.includes('unknown')) {
@@ -406,6 +542,11 @@
     const sel = headers(p, columns, opts).map(h =>
       `${selectExpr(`${p.alias[h.view]}.${h.column}`, h.format, typeOf(h.view, h.column))} AS [${h.name}]`);
     const lines = [];
+    if (p.params && p.params.length) {
+      lines.push('-- To run this in SSMS, declare the parameters first (Report Builder and the .rdl ask for them instead):');
+      if (p.joins.some(j => j.role === 'filter')) lines.push(`-- DECLARE @CollectionID nvarchar(8) = 'SMS00001';`);
+      for (const q of p.params) lines.push(`-- DECLARE @${q.name} ${q.sql} = ${q.default === '' ? 'NULL' : q.rdl === 'String' ? `N'${q.default.replace(/'/g, "''")}'` : q.rdl === 'DateTime' ? `'${q.default}'` : q.default};`);
+    }
     const m = p.warnings.find(w => w.multiply);
     if (m) lines.push(`-- WARNING: rows multiply. ${m.views.join(' and ')} each repeat a device; together, once per combination.`);
     lines.push('SELECT', '  ' + (sel.length ? sel.join(',\n  ') : `${p.from.alias}.Name0`), `FROM ${src(p.from.view)} ${p.from.alias}`);
@@ -414,10 +555,17 @@
       const w = p.warnings.find(x => x.view === j.view && x.fix);
       if (w) lines.push(`  -- ${w.text} To keep one: ${w.fix}`);
     }
+    const conds = [];
     if (p.where && p.where.length) {
       const why = (p.whereWhy || ['unknown']).map(w => w === 'unknown' ? 'Unknown Computer placeholders' : 'obsolete and decommissioned records');
-      lines.push(`WHERE ${p.where.join('\n  AND ')}   -- skip ${why.join(', ')}`);
+      conds.push(`${p.where.join('\n  AND ')}   -- skip ${why.join(', ')}`);
     }
+    for (const f of (p.filters || []).filter(x => x.cond)) {
+      conds.push(f.exists
+        ? `EXISTS (SELECT 1 FROM ${src(f.exists.view)} ${f.exists.alias} WHERE ${f.exists.alias}.${f.exists.key} = ${p.from.alias}.ResourceID AND ${f.cond})`
+        : f.cond);
+    }
+    if (conds.length) lines.push(`WHERE ${conds.join('\n  AND ')}`);
     if (opts.rbac) {
       const plain = [p.from, ...p.joins].filter(j => !(lookup(j.view) || {}).rbacFn).map(j => j.view);
       if (plain.length) lines.push(`-- no fn_rbac_ version (not permission-filtered): ${plain.join(', ')}`);
@@ -426,7 +574,7 @@
     return lines.join('\n');
   }
 
-  const api = { plan, toSQL, headers, explain, label, viewLabel, friendly, classify, formatOf, describe, HUB, BRIDGES, ONE_ROW, PICK_ONE, FORMATS };
+  const api = { plan, toSQL, headers, explain, label, viewLabel, friendly, classify, formatOf, describe, valueKind, OPS, HUB, BRIDGES, ONE_ROW, PICK_ONE, FORMATS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.VWhereJoin = api;
 })(this);
