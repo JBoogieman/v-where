@@ -35,8 +35,9 @@ flowchart LR
 | Search page (`web/index.html`) | Results, category filters, "not collected by default" and history flags, links to `fn_rbac_` versions, shareable links, hover help, a How it works panel, phone layout | ~870 lines |
 | Search (`web/search.js`) | Translates everyday words into ConfigMgr names, ranks views, keeps only columns that match the whole search, highlights whole words | ~370 lines, 26 tests |
 | Column descriptions (`web/columns.js`) | One-line, plain-English descriptions for about 160 of the most-used columns | ~220 lines, 4 tests |
-| Join planner (`web/joinplan.js`) | Builds one query around the device list, adds link tables for users, updates and collections, warns when a view repeats devices (and louder when two of them multiply), leaves out obsolete records that would show a device twice, converts codes and units to readable values, and explains each connection in plain English | ~420 lines, 40 tests |
-| Report builder (`web/rdl.js`) | Turns a draft into an RDL 2008/01 report: shared data source, permission parameters, collection picker, sortable table | ~225 lines, 10 tests |
+| Join planner (`web/joinplan.js`) | Builds one query around the device list, adds link tables for users, updates and collections, warns when a view repeats devices (and louder when two of them multiply), leaves out obsolete records that would show a device twice, adds filters and report parameters (a filter on a view not in the report uses EXISTS, so it can't repeat a device), converts codes and units to readable values, and explains each connection in plain English | ~560 lines, 48 tests |
+| Query explainer (`web/sqlexplain.js`) | Paste any ConfigMgr query: explains each view and column, flags rows that multiply, history views, missing columns and unfiltered obsolete records, and converts between plain views and `fn_rbac_` | ~200 lines, 10 tests |
+| Report builder (`web/rdl.js`) | Turns a draft into an RDL 2008/01 report: shared data source, permission parameters, collection picker, filter parameters, sortable table | ~240 lines, 11 tests |
 | Delivery | GitHub Pages site and a single-file offline build (`tools/build_offline.py`) | ~1 MB HTML |
 
 More detail: [How the connections work](how-connections-work.md) · [User guide](user-guide.md) · [Lab build](lab-build.md)
@@ -50,7 +51,7 @@ More detail: [How the connections work](how-connections-work.md) · [User guide]
 | Join planner | Working; unit tested |
 | .rdl output | Working; checked against Microsoft's RDL schema |
 | In-page help | Hover explanations, How it works panel, plain-English connections in the Report draft, column descriptions |
-| Tests | 84 tests (search, join planner, .rdl, schema file tools) run on every push and pull request; the site only deploys if they pass. The T-SQL exporter is checked against the PowerShell one on the lab site |
+| Tests | 103 tests (search, join planner, .rdl, query explainer, schema file tools) run on every push and pull request; the site only deploys if they pass. The T-SQL exporter is checked against the PowerShell one on the lab site |
 | Hosting | Live on GitHub Pages; offline build available |
 
 **Data policy:** all schema data comes from a lab site. No production data, hostnames or organization details are in the repo.

@@ -1,6 +1,6 @@
 # v_Where user guide
 
-v_Where answers "which ConfigMgr view holds this?" and then builds the report for you. This guide covers the four things people do with it: find data, build a report, put the report in ConfigMgr, and use your own site's schema.
+v_Where answers "which ConfigMgr view holds this?" and then builds the report for you. This guide covers what people do with it: find data, build and filter a report, put it in ConfigMgr, explain a query you already have, and use your own site's schema.
 
 New to ConfigMgr's tables? Click **How it works** at the top of the page for the three steps and a glossary, and hover over anything for a short explanation.
 
@@ -54,6 +54,17 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 5. **Fix repeats.** A yellow note means a view has more than one row per device (one per drive, per adapter...), so devices would repeat. Where there's a common fix, click **Keep one row** (for example, only the C: drive).
     A red **Devices will repeat in this report** note is the serious one: two of your tables repeat devices, and together they multiply (3 drives and 150 programs make 450 rows for one device). The **Report draft** button's count turns red when this happens. Click a fix in the note, or split the report in two.
 
+6. **Filter it.** Click the funnel next to any column in a view, or pick one from **Add a filter on…** in the draft. Choose a condition and a value:
+
+| Column holds | Conditions |
+| --- | --- |
+| Text | contains, starts with, is, is not, doesn't contain, is blank, isn't blank |
+| Numbers | = ≠ > ≥ < ≤, is blank, isn't blank |
+| Dates | more than N days ago, in the last N days, before, on or after, is blank, isn't blank |
+| Yes/no | is Yes, is No, is blank |
+
+   Tick **Ask** to make the filter a question the report asks when it runs: the downloaded .rdl gets a parameter (`@Model`, `@LastBootUpTimeDays`) with your value as the default. The column you filter on doesn't have to be in the report. If its view isn't, v_Where checks it with `EXISTS`, so "only devices with Office installed" narrows the list without adding a row per program. Filters work on the raw value, so codes are filtered as numbers (chassis type 10, not "Notebook").
+
 The draft is saved in your browser, so it's still there next time you open the page on the same computer.
 
 **Run the query yourself:** **Copy query** gives you the SQL. In SQL Server Management Studio, declare the parameters first:
@@ -63,9 +74,23 @@ DECLARE @CollectionID nvarchar(8) = 'SMS00001';   -- a collection ID from your s
 -- then paste the query
 ```
 
+With filters set to **Ask**, the query starts with the `DECLARE` lines you need, commented out: uncomment them in SSMS.
+
 With **SSRS version** on, the query also needs `@UserSIDs`, which only a report server provides. Run it with that option off.
 
-## 3. Put the report in ConfigMgr
+## 3. Explain a query you already have
+
+Click **Explain SQL** at the top and paste any ConfigMgr query: an inherited report's, a forum post's, or one you wrote in SSMS. As you paste, you get:
+
+- **Checks:** rows that multiply (two views that each repeat a device), columns that don't exist in the view, history views, views not collected by default, obsolete records left in, plain views that would ignore console permissions in SSRS, and `SELECT *`.
+- **Views:** what each one is, how many rows per device it has, and its alias. Click one to open it.
+- **Columns:** every `alias.column` in the query, with what it means.
+- **SSRS version:** every view that has one switched to its `fn_rbac_` function with `@UserSIDs`, ready for Report Builder.
+- **Plain version:** the reverse, `fn_rbac_` functions back to plain views, so a report's query runs in SSMS.
+
+Only view names change in the conversion; formatting, comments and everything else stay as pasted. It runs in your browser: the query isn't sent anywhere or saved.
+
+## 4. Put the report in ConfigMgr
 
 1. In Report draft, under **Download as a ConfigMgr report**, enter a **Report name** and your 3-character **Site code**.
 2. Click **Download .rdl**.
@@ -76,7 +101,7 @@ The .rdl is shaped like ConfigMgr's built-in reports: it uses the site's shared 
 
 If it fails with a permission error on `fn_rbac_GetAdminIDsfromUserSIDs`, the account running it lacks ConfigMgr reporting rights. Ask whoever manages SSRS, or build the report in Report Builder from the plain-view query instead (not permission-filtered).
 
-## 4. Use your own site's schema
+## 5. Use your own site's schema
 
 The bundled schema comes from a lab site. Your site may have custom hardware inventory classes, or a newer ConfigMgr version, that it doesn't know about. Export your own, either way:
 

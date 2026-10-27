@@ -62,6 +62,14 @@ If you already picked a view that carries both IDs, the planner reuses it instea
     - obsolete records: when a device is reinstalled or gets a new ConfigMgr ID, its old record is kept and marked obsolete, so without this the device shows twice;
     - decommissioned records;
     - the two "x64/x86 Unknown Computer" placeholder records ConfigMgr keeps for OS deployment.
+- **Your filters** go in the `WHERE` too. A filter on a view that's already in the report is applied to it in place (`os.LastBootUpTime0 < DATEADD(day, -30, GETDATE())`). A filter on any other view linked to devices becomes an `EXISTS` check, so it narrows the devices without joining the view and repeating them:
+
+```sql
+AND EXISTS (SELECT 1 FROM v_GS_ADD_REMOVE_PROGRAMS flt1
+            WHERE flt1.ResourceID = sys.ResourceID AND flt1.DisplayName0 LIKE N'%' + @DisplayName + N'%')
+```
+
+  A filter set to **Ask** uses a parameter (`@DisplayName`) that the downloaded .rdl declares, with the typed value as its default. Typed values are quoted, and numbers and dates are checked, so nothing typed can change the query.
 
 ### 6. Warn about repeats
 
@@ -136,5 +144,6 @@ All of this is in `web/joinplan.js`, plain JavaScript with no dependencies:
 | `ONE_ROW` | Views known to have one row per device |
 | `PICK_ONE` | The "keep one row" fixes |
 | `FORMATS` | Readable values |
+| `OPS`, `filterCond()` | Filter conditions and how each becomes SQL |
 
 Tests: `node tools/test_joinplan.js` (add `--show` to print each generated query).
