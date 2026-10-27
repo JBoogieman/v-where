@@ -48,10 +48,11 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 | --- | --- | --- |
 | Only devices in one collection | On | Adds `@CollectionID`; the report asks which collection when it runs |
 | Readable values | On | Memory in GB, status codes as words, 1/0 as Yes/No. Disk sizes stay raw, because ConfigMgr versions store them in different units |
-| Skip Unknown Computer rows | On | Leaves out the two OS deployment placeholder records |
+| Skip stale records | On | Leaves out obsolete and decommissioned records (a reinstalled device would otherwise show twice) and the two Unknown Computer placeholders |
 | SSRS version | Off | Uses the permission-filtered `fn_rbac_` versions with `@UserSIDs` (the downloaded .rdl always does) |
 
 5. **Fix repeats.** A yellow note means a view has more than one row per device (one per drive, per adapter...), so devices would repeat. Where there's a common fix, click **Keep one row** (for example, only the C: drive).
+    A red **Devices will repeat in this report** note is the serious one: two of your tables repeat devices, and together they multiply (3 drives and 150 programs make 450 rows for one device). The **Report draft** button's count turns red when this happens. Click a fix in the note, or split the report in two.
 
 The draft is saved in your browser, so it's still there next time you open the page on the same computer.
 

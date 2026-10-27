@@ -4,6 +4,9 @@ What changed in each version of v_Where. Newest first. Version numbers follow [s
 
 ## Unreleased
 
+- **Duplicate-row guardrails.** When two tables in a report each repeat a device (drives and installed programs, say), their rows multiply: 3 × 150 = 450 rows for one device. The Report draft now says so in red right under the columns, with the fixes that apply; the Report draft button's count turns red; adding the column that causes it shows a heads-up; and the query starts with a warning comment.
+- **Skip stale records** (on by default, replaces "Skip Unknown Computer rows"): also leaves out obsolete and decommissioned records, so a reinstalled device shows once.
+- Colors: buttons and selected chips are readable in dark mode (dark text on the light blue), and the light-mode blue is a shade darker so links pass contrast checks on highlighted rows.
 - Schema export in plain T-SQL (`extractor/Export-VWhereSchema.sql`), run with sqlcmd. No PowerShell, so it works where PowerShell is locked down to Constrained Language Mode.
 - `tools/compare_schema.py`: compare two schema exports, for example your site against the bundled lab schema, or two ConfigMgr versions.
 - The page, the offline build and the compare tool read schema files the way sqlcmd writes them: a byte order mark, and a line break every 2,000 or so characters.

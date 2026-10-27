@@ -187,6 +187,50 @@ test('every alias is unique and not a SQL keyword (all 443 device views at once)
     assert.ok(!all.some(a => /^(as|on|in|or|is|by|to|of|if|and|end|for|key|not|set|top|use)$/i.test(a)), 'reserved alias');
   });
 
+// ---- Rows that multiply ----
+const multiply = (p) => p.warnings.find(w => w.multiply);
+test('multiply: two multi-row views warn that rows multiply (drives x programs)',
+  [C('v_R_System', 'Name0'), C('v_GS_LOGICAL_DISK', 'FreeSpace0'), C('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0')], {},
+  (p, sql) => {
+    const m = multiply(p);
+    assert.ok(m, 'no multiply warning');
+    assert.deepStrictEqual(m.views, ['v_GS_LOGICAL_DISK', 'v_GS_ADD_REMOVE_PROGRAMS']);
+    assert.match(m.text, /together they multiply/);
+    assert.match(sql, /^-- WARNING: rows multiply\. v_GS_LOGICAL_DISK and v_GS_ADD_REMOVE_PROGRAMS/);
+  });
+
+test('multiply: keeping one row on one of them leaves nothing to multiply',
+  [C('v_GS_LOGICAL_DISK', 'FreeSpace0'), C('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0')], { keepOne: ['v_GS_LOGICAL_DISK'] },
+  (p, sql) => { assert.ok(!multiply(p)); assert.doesNotMatch(sql, /rows multiply/); });
+
+test('multiply: one multi-row view on its own is a plain warning, not a multiply',
+  [C('v_R_System', 'Name0'), C('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0'), C('v_GS_OPERATING_SYSTEM', 'Caption0')], {},
+  (p) => assert.ok(!multiply(p)));
+
+test('multiply: a link table counts (primary users x installed programs)',
+  [C('v_R_User', 'Unique_User_Name0'), C('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0')], {},
+  (p) => assert.deepStrictEqual(multiply(p).views, ['v_GS_ADD_REMOVE_PROGRAMS', 'v_UsersPrimaryMachines']));
+
+test('multiply: the collection filter is not a repeat',
+  [C('v_GS_LOGICAL_DISK', 'FreeSpace0')], { collection: true },
+  (p) => assert.ok(!multiply(p)));
+
+test('multiply: explain() says so in plain English',
+  [C('v_GS_LOGICAL_DISK', 'FreeSpace0'), C('v_GS_ADD_REMOVE_PROGRAMS', 'DisplayName0')], {},
+  (p) => assert.ok(J.explain(p).some(e => e.role === 'multiply' && /once for every combination/.test(e.text))));
+
+// ---- Obsolete and decommissioned records ----
+test('skipObsolete leaves out obsolete and decommissioned records',
+  [C('v_R_System', 'Name0')], { skipUnknown: true, skipObsolete: true },
+  (p, sql) => {
+    assert.match(sql, /^WHERE ISNULL\(sys\.Unknown0, 0\) = 0\n  AND ISNULL\(sys\.Obsolete0, 0\) = 0\n  AND ISNULL\(sys\.Decommissioned0, 0\) = 0   -- skip Unknown Computer placeholders, obsolete and decommissioned records$/m);
+    assert.ok(J.explain(p).some(e => e.role === 'where' && /reinstalled device shows once/.test(e.text)));
+  });
+
+test('skipObsolete does nothing on a user-only report',
+  [C('v_R_User', 'Mail0')], { skipObsolete: true },
+  (p, sql) => assert.doesNotMatch(sql, /Obsolete0/));
+
 // ---- Plain-English explanation of the connections ----
 const said = (p) => J.explain(p).map(e => e.text);
 test('explain: one sentence per table, in query order, plus the Unknown Computer filter',
