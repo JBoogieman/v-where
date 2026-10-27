@@ -12,7 +12,7 @@
 
 1. **Search in plain words:** `ram`, `last boot`, `bitlocker`, `primary user`. Everyday words are translated into ConfigMgr's names, and results list the views (tables) that hold the data, with the matching columns listed first and highlighted.
 2. **Click + on the columns you want,** from as many views as you need.
-3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, and gives you the SQL or a ConfigMgr-ready `.rdl` report.
+3. **Open Report draft.** v_Where connects the views for you (one row per device), explains each connection in plain English, warns you before anything would repeat devices, and gives you the SQL or a ConfigMgr-ready `.rdl` report.
 
 Hover over anything on the page for a short explanation, or open **How it works** for a glossary.
 
