@@ -31,6 +31,7 @@ You'll need Node.js (any current LTS) for the tests and Python 3 for the offline
 node tools/test_search.js
 node tools/test_joinplan.js      # add --show to print each generated query
 node tools/test_rdl.js
+node tools/test_sqlexplain.js
 python3 tools/test_schema_tools.py   # the offline build and compare tool, including sqlcmd-style files
 ```
 
@@ -45,6 +46,8 @@ They also run on every push and pull request, and the site only deploys when the
 | Column descriptions | `BY_VIEW` and `ANY` in `web/columns.js` | `tools/test_search.js` checks every described column exists |
 | How views are joined, link tables, one-row views | `BRIDGES`, `ONE_ROW`, `PICK_ONE` in `web/joinplan.js` | `tools/test_joinplan.js` |
 | Readable values | `FORMATS` in `web/joinplan.js` | `tools/test_joinplan.js` |
+| Filters and report parameters | `OPS` and `filterCond()` in `web/joinplan.js` | `tools/test_joinplan.js`, `tools/test_rdl.js` |
+| Explain SQL (checks, SSRS and plain conversion) | `web/sqlexplain.js` | `tools/test_sqlexplain.js` |
 | The `.rdl` report | `web/rdl.js` | `tools/test_rdl.js` |
 | The schema export | `extractor/Export-VWhereSchema.sql` and `.ps1` | `lab/cm01/check-sql-export.ps1` on a site server: runs both and compares them |
 | The page, help text and hover tips | `web/index.html` | Open the page and try it |
