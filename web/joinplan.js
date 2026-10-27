@@ -176,8 +176,11 @@
    *   opts.collection  true: keep only members of one collection (@CollectionID)
    *   opts.keepOne     views whose "keep one row per device" fix (PICK_ONE) goes into the join
    *   opts.skipUnknown leave out the Unknown Computer placeholder records (device reports)
+   *   opts.skipObsolete leave out obsolete and decommissioned records, which duplicate a current one (device reports)
    * lookup may also return types: { column: sqlType }, used for readable values (opts.readable in toSQL)
-   * Returns { anchor, from, joins[], alias{}, warnings[], unplaced[] }
+   * Returns { anchor, from, joins[], alias{}, warnings[], unplaced[], where[], whereWhy[] }
+   *   warnings[]: per view { view, text, fix?, kept? }, plus at most one { view: null, multiply: true, views[], text }
+   *   when two or more tables can each repeat a device: their rows multiply.
    *   from / joins[i]: { view, alias, type: 'JOIN' | 'LEFT JOIN', on, role: 'hub'|'filter'|'bridge'|'data' }
    */
   function plan(viewNames, lookup, opts = {}) {
@@ -275,12 +278,31 @@
       }
     }
 
-    // 6) All Systems (and v_R_System) include two "Unknown Computer" placeholder records for OS deployment.
-    //    opts.skipUnknown leaves them out of device reports.
-    const where = [];
-    if (opts.skipUnknown && anchor === HUB) where.push(`ISNULL(${A}.Unknown0, 0) = 0`);
+    // 6) Repeats multiply. One table with several rows per device repeats the device; two of them repeat it
+    //    once per combination: 3 drives and 150 programs make 450 rows for one device. Every link table
+    //    repeats too (one row per user, update, configuration item or collection).
+    const perWhat = anchor === HUB ? 'device' : 'user';
+    const repeaters = joins.filter(j => j.role === 'bridge' || (j.role === 'data' && warnings.some(w => w.view === j.view && !w.kept)))
+      .map(j => j.view);
+    if (repeaters.length >= 2) {
+      const names = repeaters.map(v => `${friendly(v)} (${v})`);
+      const list = names.length === 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+      warnings.push({ view: null, multiply: true, views: repeaters,
+        text: `${list} can each have several rows per ${perWhat}, and together they multiply. For example, 3 drives and 150 programs make 450 rows for one ${perWhat}. ` +
+              `Keep one row where it's offered, or split this into separate reports.` });
+    }
 
-    return { anchor, from, joins, alias, warnings, unplaced, where };
+    // 7) Records that aren't current devices. Device reports only.
+    //    opts.skipUnknown: the two "Unknown Computer" placeholders All Systems keeps for OS deployment.
+    //    opts.skipObsolete: obsolete records (replaced by a newer record for the same device, e.g. after a
+    //    reinstall) and decommissioned ones. Left in, they show the same device twice.
+    const where = [], whereWhy = [];
+    if (anchor === HUB) {
+      if (opts.skipUnknown) { where.push(`ISNULL(${A}.Unknown0, 0) = 0`); whereWhy.push('unknown'); }
+      if (opts.skipObsolete) { where.push(`ISNULL(${A}.Obsolete0, 0) = 0`, `ISNULL(${A}.Decommissioned0, 0) = 0`); whereWhy.push('obsolete'); }
+    }
+
+    return { anchor, from, joins, alias, warnings, unplaced, where, whereWhy };
   }
 
   // "LastBootUpTime0" -> "Last Boot Up Time", "Name0" on v_R_System -> "Name"
@@ -334,8 +356,17 @@
       else if (w) text += ` It can have more than one row per ${perWhat}, so a ${perWhat} may appear more than once.`;
       out.push({ view: j.view, role: j.role, text });
     }
-    if (p.where && p.where.length) {
+    const m = p.warnings.find(w => w.multiply);
+    if (m) {
+      out.push({ view: null, role: 'multiply',
+        text: `Watch out: ${m.views.map(friendly).join(' and ')} each repeat a ${perWhat}, so together they multiply. A ${perWhat} shows once for every combination of their rows.` });
+    }
+    const why = p.whereWhy || (p.where && p.where.length ? ['unknown'] : []);
+    if (why.includes('unknown')) {
       out.push({ view: null, role: 'where', text: 'The two "Unknown Computer" placeholder records ConfigMgr keeps for OS deployment are left out.' });
+    }
+    if (why.includes('obsolete')) {
+      out.push({ view: null, role: 'where', text: 'Obsolete and decommissioned records are left out, so a reinstalled device shows once, not once per record.' });
     }
     return out;
   }
@@ -374,13 +405,19 @@
     const typeOf = (view, col) => { const v = lookup(view); return v && v.types ? v.types[col] : null; };
     const sel = headers(p, columns, opts).map(h =>
       `${selectExpr(`${p.alias[h.view]}.${h.column}`, h.format, typeOf(h.view, h.column))} AS [${h.name}]`);
-    const lines = ['SELECT', '  ' + (sel.length ? sel.join(',\n  ') : `${p.from.alias}.Name0`), `FROM ${src(p.from.view)} ${p.from.alias}`];
+    const lines = [];
+    const m = p.warnings.find(w => w.multiply);
+    if (m) lines.push(`-- WARNING: rows multiply. ${m.views.join(' and ')} each repeat a device; together, once per combination.`);
+    lines.push('SELECT', '  ' + (sel.length ? sel.join(',\n  ') : `${p.from.alias}.Name0`), `FROM ${src(p.from.view)} ${p.from.alias}`);
     for (const j of p.joins) {
       lines.push(`${j.type} ${src(j.view)} ${j.alias} ON ${j.on}`);
       const w = p.warnings.find(x => x.view === j.view && x.fix);
       if (w) lines.push(`  -- ${w.text} To keep one: ${w.fix}`);
     }
-    if (p.where && p.where.length) lines.push(`WHERE ${p.where.join(' AND ')}   -- skip Unknown Computer placeholders`);
+    if (p.where && p.where.length) {
+      const why = (p.whereWhy || ['unknown']).map(w => w === 'unknown' ? 'Unknown Computer placeholders' : 'obsolete and decommissioned records');
+      lines.push(`WHERE ${p.where.join('\n  AND ')}   -- skip ${why.join(', ')}`);
+    }
     if (opts.rbac) {
       const plain = [p.from, ...p.joins].filter(j => !(lookup(j.view) || {}).rbacFn).map(j => j.view);
       if (plain.length) lines.push(`-- no fn_rbac_ version (not permission-filtered): ${plain.join(', ')}`);

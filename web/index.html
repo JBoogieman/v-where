@@ -7,18 +7,20 @@
 <style>
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #e3e6ec;
-    --accent: #2f6fde; --accent-soft: #e6eefc; --hit: #fff1b8; --hit-text: #3d3200;
+    --accent: #285fc4; --accent-soft: #e6eefc; --on-accent: #ffffff; --hit: #fff1b8; --hit-text: #3d3200;
     --badge-view: #e7f4ea; --badge-view-text: #1f6b35; --badge-fn: #f3e9fb; --badge-fn-text: #6b2a99;
     --warn: #b7791f; --warn-soft: #fdf3e1; --warn-text: #6b4508;
+    --bad: #c53030; --bad-soft: #fdecec; --bad-text: #7a1c1c;
     --mono:ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #12151b; --panel: #1a1e26; --text: #e4e7ee; --muted: #9aa3b5; --line: #2a303c;
-      --accent: #6b9cff; --accent-soft: #22304d; --hit: #5a4a10; --hit-text: #ffe9a3;
+      --accent: #6b9cff; --accent-soft: #22304d; --on-accent: #0b1220; --hit: #5a4a10; --hit-text: #ffe9a3;
       --badge-view: #173323; --badge-view-text: #8fe0a8; --badge-fn: #2e1f3d; --badge-fn-text: #d6b3f5;
       --warn: #d9a443; --warn-soft: #33280f; --warn-text: #f3d9a4;
+      --bad: #f07171; --bad-soft: #3a1717; --bad-text: #f6c4c4;
     }
   }
   * { box-sizing: border-box; }
@@ -36,7 +38,7 @@
   label.toggle { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
   .chip { border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
-  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .chip .n { opacity: 0.75; margin-left: 4px; }
   main { flex: 1; display: grid; grid-template-columns: minmax(280px, 38%) 1fr; min-height: 0; }
   #results { overflow: auto; border-right: 1px solid var(--line); }
@@ -75,6 +77,12 @@
   button.back { display: none; margin-bottom: 10px; }
   .note { border-left: 3px solid var(--line); background: var(--panel); padding: 8px 12px; border-radius: 4px; margin: 10px 0; }
   .note.warn { border-left-color: var(--warn); background: var(--warn-soft); color: var(--warn-text); }
+  /* Rows multiply: the one warning that makes a report wrong, so it gets its own color and sits right under the columns */
+  .note.stop { border-left: 4px solid var(--bad); background: var(--bad-soft); color: var(--bad-text); }
+  .note.stop b { display: block; margin-bottom: 2px; }
+  .note.stop .fixes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .note.stop .fixes button { margin-left: 0; }
+  #basketBtn .count.stop { background: var(--bad); color: var(--on-accent); }
   .note code { font-family: var(--mono); font-size: 12px; }
   .syn { margin-top: 8px; color: var(--muted); font-size: 12px; }
   .syn b { color: var(--text); font-weight: 600; }
@@ -91,10 +99,10 @@
   .toast.show { opacity: 1; }
   /* Report draft */
   #basketBtn { font-weight: 600; }
-  #basketBtn .count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; text-align: center; }
+  #basketBtn .count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 11px; text-align: center; }
   td.addcell { width: 34px; padding-right: 0; }
   button.add { width: 24px; height: 24px; padding: 0; line-height: 22px; font-weight: 700; }
-  button.add[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.add[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .sidepanel { position: fixed; top: 0; right: 0; bottom: 0; width: min(600px, 100vw); z-index: 10; display: flex; flex-direction: column;
     background: var(--panel); border-left: 1px solid var(--line); box-shadow: -10px 0 30px rgba(0, 0, 0, .2); }
   .sidepanel[hidden] { display: none; }
@@ -116,7 +124,7 @@
   .opts .hint { color: var(--muted); font-size: 12px; }
   pre.sql { font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow: auto; margin: 8px 0; }
   .note button { margin-left: 6px; padding: 1px 8px; font-size: 12px; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   button.primary:hover { filter: brightness(1.08); }
   .rdlrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
   .rdlrow label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
@@ -130,13 +138,13 @@
     font: 12px/1.45 var(--sans); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; opacity: 0; transition: opacity .12s; }
   #tip.show { opacity: 1; }
   .badge[data-tip], .tag[data-tip], .sub [data-tip], th[data-tip], .via[data-tip], .stats[data-tip], summary[data-tip] { cursor: help; }
-  #helpBtn .q { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-right: 5px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+  #helpBtn .q { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-right: 5px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 700; }
   .intro { display: flex; gap: 8px 18px; align-items: center; flex-wrap: wrap; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-soft); font-size: 13px; }
   .intro[hidden] { display: none; }
   .intro b { font-weight: 600; }
   .steps { display: flex; gap: 6px 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; counter-reset: step; }
   .steps li { counter-increment: step; }
-  .steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+  .steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 700; }
   .intro .btns { margin-left: auto; display: flex; gap: 6px; }
   #help .steps { flex-direction: column; gap: 10px; margin: 6px 0 4px; }
   #help .steps li { display: grid; grid-template-columns: 24px 1fr; }
@@ -148,6 +156,7 @@
   .legend { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
   .conn ol { margin: 6px 0 0; padding-left: 22px; }
   .conn li { margin-bottom: 6px; }
+  .conn li.stopline { list-style: none; margin-left: -22px; color: var(--bad-text); font-weight: 600; }
   .conn li.where { list-style: none; margin-left: -22px; color: var(--muted); font-size: 12px; }
   .conn a.link { font-family: var(--sans); }
   /* Phone: one scrolling page. A short results list, then the view below it, with "← Results" to jump back. */
@@ -576,7 +585,17 @@
   const reportView = (o) => o.kind === 'view' ? o.name : (o.baseView && DB.byName[o.baseView] ? o.baseView : null);
   const inReport = (view, col) => report.cols.findIndex(c => c.view === view && c.column === col);
 
-  function updateBasketCount() { els.basketCount.textContent = report.cols.length; }
+  const BASKET_TIP = els.basketBtn.dataset.tip;
+  // Does the draft repeat devices because two tables multiply? Shown on the Report draft button, so it's seen before opening.
+  const multiplies = () => !!(DB && report.cols.length && draft().p.warnings.some(w => w.multiply));
+  function updateBasketCount() {
+    const stop = multiplies();
+    els.basketCount.textContent = report.cols.length;
+    els.basketCount.classList.toggle('stop', stop);
+    els.basketBtn.dataset.tip = stop
+      ? 'Your report repeats devices: two of its tables have several rows per device, and together they multiply. Open it to fix.'
+      : BASKET_TIP;
+  }
   function reportChanged() { saveReport(); updateBasketCount(); if (!els.basket.hidden) renderBasket(); }
 
   // Refresh the +/✓ buttons in the detail pane without re-rendering it (keeps the scroll position)
@@ -595,16 +614,18 @@
   function toggleColumn(view, col) {
     const i = inReport(view, col);
     const newView = i < 0 && report.cols.length && !report.cols.some(c => c.view === view);
+    const had = multiplies();
     if (i >= 0) report.cols.splice(i, 1); else report.cols.push({ view, column: col });
     reportChanged();
-    if (i >= 0) toast(`Removed ${col}`);
+    if (!had && multiplies()) toast(`Added ${col}. Heads up: devices will now repeat in this report. Open Report draft to fix it.`);
+    else if (i >= 0) toast(`Removed ${col}`);
     else if (newView) toast(`Added ${col} from ${VWhereJoin.friendly(view)}. It will be lined up with your other columns by device.`);
     else toast(`Added ${col} · ${report.cols.length} in report`);
   }
 
   function draft(force) {
     const opts = { collection: report.collection, rbac: report.rbac, keepOne: report.keepOne,
-      readable: report.readable, skipUnknown: report.skipUnknown, ...force };
+      readable: report.readable, skipUnknown: report.skipUnknown, skipObsolete: report.skipUnknown, ...force };
     const p = VWhereJoin.plan(report.cols.map(c => c.view), lookup, opts);
     return { p, sql: VWhereJoin.toSQL(p, report.cols, lookup, opts) };
   }
@@ -645,6 +666,15 @@
     else els.basketBtn.focus();
   }
 
+  // The rows-multiply warning, right under the columns, with the one-click fixes that apply
+  function multNote(p) {
+    const m = p.warnings.find(w => w.multiply);
+    if (!m) return '';
+    const fixes = p.warnings.filter(w => w.fix && m.views.includes(w.view));
+    return `<div class="note stop" role="alert"><b>Devices will repeat in this report.</b>${esc(m.text)}
+      ${fixes.length ? `<div class="fixes">${fixes.map(w => `<button type="button" data-keep="${esc(w.view)}">${esc(VWhereJoin.friendly(w.view))}: keep ${esc(w.fix.replace(/^AND \w+\./, ''))}</button>`).join('')}</div>` : ''}</div>`;
+  }
+
   function renderBasket() {
     if (!DB) return;
     const cols = report.cols;
@@ -664,11 +694,12 @@
           <td class="mv"><button type="button" data-up="${i}" data-tip="Move up: columns appear in this order in the report" aria-label="Move up" ${i ? '' : 'disabled'}>↑</button> <button type="button" data-down="${i}" data-tip="Move down" aria-label="Move down" ${i < cols.length - 1 ? '' : 'disabled'}>↓</button> <button type="button" data-rm="${i}" data-tip="Remove from the report" aria-label="Remove">✕</button></td>
         </tr>`).join('')}
         </tbody></table>
+        ${multNote(p)}
         <section class="conn"><h3>How the tables are connected</h3>
           <p class="lead">To show these columns side by side, one row per ${p.anchor === VWhereJoin.HUB ? 'device' : 'user'}, v_Where lines the tables up by ID.
             In SQL that's called a join; it's written for you in the query below. ${p.anchor === VWhereJoin.HUB ? 'Devices' : 'Users'} with no data in a table still show, with blanks.
             <a class="link" data-help href="#" role="button">More in How it works</a></p>
-          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : ''}">${esc(s.text)}</li>`).join('')}</ol>
+          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : s.role === 'multiply' ? 'stopline' : ''}">${esc(s.text)}</li>`).join('')}</ol>
         </section>
         <div class="opts">
           <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
@@ -676,11 +707,11 @@
           <label><input type="checkbox" data-opt="readable" ${report.readable ? 'checked' : ''}>
             <span>Readable values <span class="hint">(memory in GB, status codes as words, 1/0 as Yes/No; disk sizes stay raw because ConfigMgr versions store them in different units)</span></span></label>
           <label><input type="checkbox" data-opt="skipUnknown" ${report.skipUnknown ? 'checked' : ''}>
-            <span>Skip Unknown Computer rows <span class="hint">(the two OS deployment placeholders in All Systems)</span></span></label>
+            <span>Skip stale records <span class="hint">(obsolete and decommissioned records that would show a device twice, and the two Unknown Computer placeholders)</span></span></label>
           <label><input type="checkbox" data-opt="rbac" ${report.rbac ? 'checked' : ''}>
             <span>SSRS version <span class="hint">(<code>fn_rbac_</code> functions with <code>@UserSIDs</code>, so people only see what their console role allows)</span></span></label>
         </div>
-        ${p.warnings.filter(w => !p.joins.some(j => j.view === w.view && j.role === 'bridge')).map(w => w.kept
+        ${p.warnings.filter(w => !w.multiply && !p.joins.some(j => j.view === w.view && j.role === 'bridge')).map(w => w.kept
           ? `<div class="note">${esc(w.text)}<button type="button" data-unkeep="${esc(w.view)}">Undo</button></div>`
           : `<div class="note warn">${esc(w.text)}${w.fix ? `<button type="button" data-keep="${esc(w.view)}">Keep one row: ${esc(w.fix.replace(/^AND /, ''))}</button>` : ''}</div>`).join('')}
         ${p.unplaced.map(u => `<div class="note warn"><b>Left out ${esc(u.view)}.</b> ${esc(u.why)}</div>`).join('')}
