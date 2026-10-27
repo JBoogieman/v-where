@@ -58,11 +58,14 @@ If you already picked a view that carries both IDs, the planner reuses it instea
 ### 5. Filter
 
 - **Only devices in one collection** (on by default) joins `v_FullCollectionMembership` with `@CollectionID`, the same way built-in ConfigMgr reports do. The report asks which collection when it runs.
-- **Skip Unknown Computer rows** (on by default) leaves out the two "x64/x86 Unknown Computer" placeholder records ConfigMgr keeps for OS deployment.
+- **Skip stale records** (on by default) leaves out records that aren't a current device:
+    - obsolete records: when a device is reinstalled or gets a new ConfigMgr ID, its old record is kept and marked obsolete, so without this the device shows twice;
+    - decommissioned records;
+    - the two "x64/x86 Unknown Computer" placeholder records ConfigMgr keeps for OS deployment.
 
 ### 6. Warn about repeats
 
-Some views have more than one row per device: one per drive, per CPU socket, per network adapter. Joining one repeats each device once per row. The planner warns you, and for common cases offers a one-click fix that keeps one row:
+Some views have more than one row per device: one per drive, per CPU socket, per network adapter. Joining one repeats each device once per row. The planner warns you (a yellow note), and for common cases offers a one-click fix that keeps one row:
 
 | View | Has | "Keep one row" fix |
 | --- | --- | --- |
@@ -74,6 +77,8 @@ Some views have more than one row per device: one per drive, per CPU socket, per
 | `v_GS_NETWORK_ADAPTER_CONFIGURATION` | one row per network adapter | `IPEnabled0 = 1` |
 
 Views known to have one row per device get no warning: `v_R_System`, `v_GS_OPERATING_SYSTEM`, `v_GS_COMPUTER_SYSTEM`, `v_GS_COMPUTER_SYSTEM_PRODUCT`, `v_GS_PC_BIOS`, `v_GS_X86_PC_MEMORY`, `v_GS_SYSTEM_CONSOLE_USAGE`, `v_GS_WORKSTATION_STATUS`, `v_GS_TPM`, `v_GS_FIRMWARE` and `v_CH_ClientSummary`. Everything else gets a "can return more than one row per device" warning. The list is kept short on purpose: a false warning costs a glance, a missing one costs a wrong report.
+
+**When repeats multiply.** Two tables that each repeat a device multiply each other: 3 drives and 150 installed programs make 450 rows for one device, and a fleet of 3,000 laptops becomes over a million rows. Link tables count too (a device with two primary users, or one row per update). When a draft has two or more of these, the Report draft shows a red **Devices will repeat in this report** note right under the columns, with the one-click fixes that apply. The **Report draft** button's count turns red, and the query starts with a `-- WARNING: rows multiply` comment. Keep one row where it's offered, or split the report in two.
 
 ### 7. Write the query
 
@@ -94,7 +99,9 @@ LEFT JOIN v_GS_OPERATING_SYSTEM os ON os.ResourceID = sys.ResourceID
 LEFT JOIN v_GS_X86_PC_MEMORY mem ON mem.ResourceID = sys.ResourceID
 LEFT JOIN v_UsersPrimaryMachines upm ON upm.MachineID = sys.ResourceID
 LEFT JOIN v_R_User usr ON usr.ResourceID = upm.UserResourceID
-WHERE ISNULL(sys.Unknown0, 0) = 0   -- skip Unknown Computer placeholders
+WHERE ISNULL(sys.Unknown0, 0) = 0
+  AND ISNULL(sys.Obsolete0, 0) = 0
+  AND ISNULL(sys.Decommissioned0, 0) = 0   -- skip Unknown Computer placeholders, obsolete and decommissioned records
 ```
 
 And the Report draft explains it like this:
@@ -107,6 +114,8 @@ And the Report draft explains it like this:
 6. Users (v_R_User) is matched through Primary users.
 
 The two "Unknown Computer" placeholder records ConfigMgr keeps for OS deployment are left out.
+
+Obsolete and decommissioned records are left out, so a reinstalled device shows once, not once per record.
 
 ## What it can't do yet
 
