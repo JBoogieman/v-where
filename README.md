@@ -23,7 +23,7 @@ Hover over anything on the page for a short explanation, or open **How it works*
 - **841 views, 625 permission-filtered `fn_rbac_` functions and 22,457 columns** from a ConfigMgr current branch lab site.
 - **Which hardware inventory classes and columns aren't collected by default:** the view exists but stays empty until someone turns them on in Client Settings.
 - **The Windows (WMI) class behind each inventory view,** and each view's `fn_rbac_` version for SSRS reports.
-- **Plain-English descriptions for about 160 of the most-used columns,** like "Installed memory, in KB" under `TotalPhysicalMemory0`.
+- **Plain-English descriptions for about 170 of the most-used columns,** like "Installed memory, in KB" under `TotalPhysicalMemory0`.
 
 ## What it touches
 
