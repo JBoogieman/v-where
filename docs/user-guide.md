@@ -20,7 +20,7 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 
 **History views** (`v_HS_`) keep a row each time inventory sees a change, so devices repeat. They're for "what changed and when". They rank below their current `v_GS_` view, and opening one links to it.
 
-**Narrow it down.** The category chips filter by area. **Show fn_rbac_ functions** adds the permission-filtered versions to the list; most searches don't need them.
+**Narrow it down.** The category chips filter by area; the everyday ones come first, and **+N more** shows the rest. **Show fn_rbac_ functions** (at the end of the chips) adds the permission-filtered versions to the list; most searches don't need them.
 
 **Open a view.** Click a result to see:
 
@@ -35,26 +35,18 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 
 ## 2. Build a report
 
-![Report draft: three columns from three views, and how the tables are connected](screenshot-report-draft.png)
+![Report draft: columns from three views, lined up by device, with filters and the download below](screenshot-report-draft.png)
 
 1. **Pick columns.** Open any view and click **+** next to the columns you want. Pick from as many views as you need. **Add matched to report draft** adds every highlighted column at once.
 2. **Open Report draft** (top right). Your columns are listed in report order:
     - type in **Header** to rename a column in the report;
     - use the arrows to reorder, and **✕** to remove.
-3. **Check "How the tables are connected."** It explains, one line per table, how v_Where lined your views up. [How the connections work](how-connections-work.md) goes deeper.
-4. **Check the options:**
 
-| Option | Default | What it does |
-| --- | --- | --- |
-| Only devices in one collection | On | Adds `@CollectionID`; the report asks which collection when it runs |
-| Readable values | On | Memory in GB, status codes as words, 1/0 as Yes/No. Disk sizes stay raw, because ConfigMgr versions store them in different units |
-| Skip stale records | On | Leaves out obsolete and decommissioned records (a reinstalled device would otherwise show twice) and the two Unknown Computer placeholders |
-| SSRS version | Off | Uses the permission-filtered `fn_rbac_` versions with `@UserSIDs` (the downloaded .rdl always does) |
+    Under them, v_Where says it lines your columns up by device for you. That's the join: there's nothing to write. **See how** explains it, one line per table.
+3. **Fix repeats.** A red **Devices will repeat in this report** note is the serious one: two of your tables repeat devices, and together they multiply (3 drives and 150 programs make 450 rows for one device). The **Report draft** button's count turns red when this happens. Click a fix in the note, or split the report in two.
 
-5. **Fix repeats.** A yellow note means a view has more than one row per device (one per drive, per adapter...), so devices would repeat. Where there's a common fix, click **Keep one row** (for example, only the C: drive).
-    A red **Devices will repeat in this report** note is the serious one: two of your tables repeat devices, and together they multiply (3 drives and 150 programs make 450 rows for one device). The **Report draft** button's count turns red when this happens. Click a fix in the note, or split the report in two.
-
-6. **Filter it.** Click the funnel next to any column in a view, or pick one from **Add a filter on…** in the draft. Choose a condition and a value:
+    A yellow note means one view has more than one row per device (one per drive, per adapter...), so devices would repeat. Where there's a common fix, click **Keep one row** (for example, only the C: drive).
+4. **Filter it.** Click the funnel next to any column in a view, or pick one from **Add a filter on…** in the draft. Choose a condition and a value:
 
 | Column holds | Conditions |
 | --- | --- |
@@ -64,6 +56,22 @@ The view name tells you where the data comes from: `v_GS_` is the latest hardwar
 | Yes/no | is Yes, is No, is blank |
 
    Tick **Ask** to make the filter a question the report asks when it runs: the downloaded .rdl gets a parameter (`@Model`, `@LastBootUpTimeDays`) with your value as the default. The column you filter on doesn't have to be in the report. If its view isn't, v_Where checks it with `EXISTS`, so "only devices with Office installed" narrows the list without adding a row per program. Filters work on the raw value, so codes are filtered as numbers (chassis type 10, not "Notebook").
+
+5. **Download it** (see [Put the report in ConfigMgr](#4-put-the-report-in-configmgr)), or copy the query.
+
+Below that, three sections fold away until you need them. The page remembers which ones you leave open.
+
+- **How it's connected:** one line per table, saying how v_Where lined your views up. [How the connections work](how-connections-work.md) goes deeper.
+- **Options:** the summary line shows which are on.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| Collection picker | On | Adds `@CollectionID`; the report asks which collection when it runs |
+| Readable values | On | Memory in GB, status codes as words, 1/0 as Yes/No. Disk sizes stay raw, because ConfigMgr versions store them in different units |
+| Skip stale records | On | Leaves out obsolete and decommissioned records (a reinstalled device would otherwise show twice) and the two Unknown Computer placeholders |
+| SSRS version | Off | Uses the permission-filtered `fn_rbac_` versions with `@UserSIDs` (the downloaded .rdl always does) |
+
+- **Query:** the SQL v_Where wrote. **Copy query** copies it whether the section is open or not.
 
 The draft is saved in your browser, so it's still there next time you open the page on the same computer.
 
