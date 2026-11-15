@@ -6,7 +6,7 @@
 
 **[Open v_Where](https://jboogieman.github.io/v-where/)** · [User guide](docs/user-guide.md) · [Executive summary](docs/executive-summary.md) · [Roadmap](https://github.com/JBoogieman/v-where/milestones)
 
-![Report draft: columns from three views, with a plain-English list of how the tables are connected](docs/screenshot-report-draft.png)
+![Report draft: columns from three views, lined up by device for you, with filters and the download below](docs/screenshot-report-draft.png)
 
 ## How it works
 
