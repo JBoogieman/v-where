@@ -40,6 +40,11 @@
   .chip { border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .chip .n { opacity: 0.75; margin-left: 4px; }
+  .chip.more { border-style: dashed; }
+  /* fn_rbac_ toggle: a power-user switch, so it sits at the end of the group chips instead of next to search */
+  .catrow { display: flex; gap: 10px; align-items: flex-start; }
+  .catrow .chips { flex: 1; min-width: 0; }
+  .catrow label.toggle { flex: none; margin-top: 12px; font-size: 12px; }
   main { flex: 1; display: grid; grid-template-columns: minmax(280px, 38%) 1fr; min-height: 0; }
   #results { overflow: auto; border-right: 1px solid var(--line); }
   #results .meta { padding: 8px 16px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); }
@@ -153,6 +158,18 @@
   .rdlrow .site input { width: 70px; text-transform: uppercase; font-family: var(--mono); }
   .rdlrow input.need { border-color: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
   #basket .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  /* "Lined up for you": the answer to "how does it know to join?", right under the columns */
+  .joined { display: flex; gap: 8px; align-items: baseline; margin: 10px 0 4px; color: var(--muted); }
+  .joined .ok { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--badge-view); color: var(--badge-view-text); font-size: 11px; font-weight: 700; }
+  .joined a.link { font-family: var(--sans); white-space: nowrap; }
+  /* The extras (connections, options, query) fold away; which ones are open is remembered */
+  details.fold { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; background: var(--panel); }
+  details.fold > summary { padding: 8px 12px; cursor: pointer; font-weight: 600; }
+  details.fold > summary .sum { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
+  details.fold > .fbody { padding: 0 12px 10px; }
+  details.fold .opts { margin: 4px 0 0; }
+  details.fold pre.sql { margin: 0; }
+  #basket .more { margin-top: 18px; }
   /* Help: hover tips, first-visit strip, How it works panel, connection list */
   #tip { position: fixed; top: 0; left: 0; z-index: 30; max-width: 320px; padding: 7px 10px; border-radius: 6px; background: var(--text); color: var(--bg);
     font: 12px/1.45 var(--sans); box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; opacity: 0; transition: opacity .12s; }
@@ -166,9 +183,14 @@
   .steps li { counter-increment: step; }
   .steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 700; }
   .intro .btns { margin-left: auto; display: flex; gap: 6px; }
-  #help .steps { flex-direction: column; gap: 10px; margin: 6px 0 4px; }
-  #help .steps li { display: grid; grid-template-columns: 24px 1fr; }
-  #help .steps li::before { margin-top: 1px; }
+  #help .steps, .guide .steps { flex-direction: column; gap: 10px; margin: 6px 0 4px; }
+  #help .steps li, .guide .steps li { display: grid; grid-template-columns: 24px 1fr; }
+  #help .steps li::before, .guide .steps li::before { margin-top: 1px; }
+  .guide { max-width: 560px; color: var(--text); }
+  .guide .steps { gap: 14px; margin-bottom: 22px; }
+  .guide a.link { font-size: 13px; }
+  .guide .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  .guide .hint b { font-weight: 600; }
   #help h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 22px 0 8px; }
   #help p { margin: 0 0 10px; }
   #help td:first-child { white-space: nowrap; font-weight: 600; padding-right: 14px; }
@@ -193,6 +215,9 @@
     .intro { font-size: 12px; }
     .intro .btns { margin-left: 0; }
     .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .catrow label.toggle { margin-top: 13px; }
+    .catrow label.toggle .long { display: none; }
+    .guide .steps { gap: 12px; }
     .chip { flex: none; }
     main { display: block; }
     #results { max-height: 55vh; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -220,7 +245,6 @@
   </div>
   <div class="searchrow">
     <input id="q" type="search" placeholder="Search views and columns: bitlocker, last logon, install date…" autocomplete="off" spellcheck="false" aria-label="Search">
-    <label class="toggle" data-tip="Also list the fn_rbac_ functions: permission-filtered versions of the views that SSRS reports use. Most searches don't need them."><input type="checkbox" id="showFn"> Show <code>fn_rbac_</code> functions</label>
     <button type="button" id="helpBtn" aria-expanded="false" aria-controls="help" data-tip="What v_Where does, the three steps, and the words you'll see."><span class="q">?</span>How it works</button>
     <button type="button" id="sqlBtn" aria-expanded="false" aria-controls="sqlx" data-tip="Paste any ConfigMgr query: see what each view and column is, what could go wrong, and get the SSRS (fn_rbac_) or plain version.">Explain SQL</button>
     <button type="button" id="basketBtn" aria-expanded="false" aria-controls="basket" data-tip="Your report: the columns you've picked with +. Opens a panel that connects them into one query and can download a ConfigMgr report.">Report draft<span class="count" id="basketCount">0</span></button>
@@ -235,7 +259,10 @@
     <span class="btns"><button type="button" data-intro="help">How it works</button><button type="button" data-intro="ok">Got it</button></span>
   </div>
   <div class="syn" id="syn" hidden></div>
-  <div class="chips" id="chips" role="toolbar" aria-label="Categories"></div>
+  <div class="catrow">
+    <div class="chips" id="chips" role="toolbar" aria-label="Categories"></div>
+    <label class="toggle" data-tip="Also list the fn_rbac_ functions: permission-filtered versions of the views that SSRS reports use. Most searches don't need them; the downloaded report switches to them for you."><input type="checkbox" id="showFn"> <span class="long">Show </span><code>fn_rbac_</code><span class="long"> functions</span></label>
+  </div>
 </header>
 <main>
   <div id="results" role="listbox" aria-label="Results"></div>
@@ -452,34 +479,52 @@
   }
 
   // ---------- Category chips ----------
+  // The everyday groups come first. When a search matches lots of groups, the rest fold behind "+N more".
+  const CHIP_FIRST = ['Hardware inventory', 'Discovery', 'Software updates', 'Apps & deployments', 'Collections', 'Client health & status'];
+  let chipsOpen = false, chipMatches = [];
   function renderChips() {
     const labels = [...CATEGORIES.map(c => c[0]), OTHER];
+    const ordered = CHIP_FIRST.filter(l => labels.includes(l)).concat(labels.filter(l => !CHIP_FIRST.includes(l)));
     els.chips.innerHTML = [`<button class="chip" data-cat="" aria-pressed="${!state.cat}" data-tip="${esc(CATEGORY_TIPS[''])}">All<span class="n" data-n=""></span></button>`]
-      .concat(labels.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}" data-tip="${esc(CATEGORY_TIPS[l] || '')}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`)).join('');
+      .concat(ordered.map(l => `<button class="chip" data-cat="${esc(l)}" aria-pressed="${state.cat === l}" data-tip="${esc(CATEGORY_TIPS[l] || '')}">${esc(l)}<span class="n" data-n="${esc(l)}"></span></button>`))
+      .concat('<button class="chip more" data-more aria-expanded="false"></button>').join('');
   }
   function renderChipCounts(matched) {
-    // Counts reflect the current query, across all categories
+    // Counts reflect the current query, across all categories. Groups with no matches are hidden.
+    chipMatches = matched;
     const counts = {};
-    const all = matched.length;
     for (const r of matched) counts[r.o.cat] = (counts[r.o.cat] || 0) + 1;
-    els.chips.querySelectorAll('.n').forEach(n => {
-      const k = n.dataset.n;
-      const v = k ? (counts[k] || 0) : all;
-      n.textContent = v;
-      n.parentElement.style.display = (k && !v && state.cat !== k) ? 'none' : '';
+    const shown = [];
+    els.chips.querySelectorAll('.chip[data-cat]').forEach(c => {
+      const k = c.dataset.cat;
+      const v = k ? (counts[k] || 0) : matched.length;
+      c.querySelector('.n').textContent = v;
+      c.setAttribute('aria-pressed', String(k === state.cat));
+      const visible = !k || v || state.cat === k;
+      c.style.display = visible ? '' : 'none';
+      if (k && visible) shown.push(c);
     });
-    els.chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.cat === state.cat)));
+    const FOLD_AT = 7, KEEP = 6;
+    const more = els.chips.querySelector('[data-more]');
+    const folded = shown.length > FOLD_AT && !chipsOpen ? shown.slice(KEEP).filter(c => c.dataset.cat !== state.cat) : [];
+    folded.forEach(c => { c.style.display = 'none'; });
+    more.style.display = shown.length > FOLD_AT ? '' : 'none';
+    more.textContent = chipsOpen ? 'Fewer' : `+${folded.length} more`;
+    more.setAttribute('aria-expanded', String(chipsOpen));
+    more.dataset.tip = chipsOpen ? 'Show only the everyday groups.' : `Show the other groups: ${folded.map(c => c.dataset.cat).join(', ')}.`;
   }
 
   // ---------- Detail pane ----------
   function renderEmptyDetail() {
-    els.detail.innerHTML = `<div class="empty">
-      <p>Search for a word you'd expect in a column or view name, like <code>bitlocker</code>, <code>last logon</code>, <code>install date</code>, <code>ResourceID</code>.</p>
-      <p>Everyday words work too: <code>ram</code>, <code>uptime</code>, <code>primary user</code>, <code>kb</code>, <code>maintenance window</code>. They're translated into ConfigMgr's names.</p>
-      <p class="hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open</p>
-      <p>Click any result to see its columns, its <code>fn_rbac_</code> version, and related views.</p>
-      <p>Building a report? Click <b>+</b> next to columns from any views, then open <b>Report draft</b>: v_Where connects the views for you and explains how.</p>
-      <p>New to ConfigMgr's tables? <b>How it works</b> (top right) explains the steps and the words you'll see. Hover over anything for a short explanation.</p></div>`;
+    const tryIt = (w) => `<a class="link" data-try="${esc(w)}" href="#" role="button" data-tip="Search for ${esc(w)}">${esc(w)}</a>`;
+    els.detail.innerHTML = `<div class="empty guide">
+      <ol class="steps">
+        <li><span><b>Search in plain words.</b> Try ${['last boot', 'ram', 'bitlocker', 'primary user'].map(tryIt).join(', ')}. Everyday words are translated into ConfigMgr's names.</span></li>
+        <li><span><b>Click + next to the columns you want</b>, from as many views as you need.</span></li>
+        <li><span><b>Open Report draft.</b> v_Where lines the views up by device for you, so there are no joins to write, and gives you the SQL or a ConfigMgr report.</span></li>
+      </ol>
+      <p class="hint">Have a query already? <b>Explain SQL</b> says what it does and what could go wrong.</p>
+      <p class="hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open · hover over anything for a short explanation</p></div>`;
   }
 
   function showDetail(name) {
@@ -732,7 +777,8 @@
         ${hub ? `<optgroup label="Devices (v_R_System)">${hub.columns.map(c => `<option value="${esc(hub.name + '|' + c.name)}">${esc(c.name)}</option>`).join('')}</optgroup>` : ''}
       </select>`;
     return `<section class="filters"><h3>Filters</h3>
-      <p class="legend">Only include rows that match. Tick <b>Ask</b> to have the report ask for the value when it runs. To filter on any other column, use the funnel next to it in a view.</p>
+      <p class="legend">${rows ? 'Only rows that match are included. Tick <b>Ask</b> to have the report ask for the value when it runs.'
+        : 'Optional: only include rows that match, like Model contains Latitude.'} Any other column: use the funnel next to it in a view.</p>
       ${rows}${picker}</section>`;
   }
   function addFilter(view, column) {
@@ -761,50 +807,83 @@
       const { p, sql } = draft();
       const views = new Set(cols.map(c => c.view)).size;
       const steps = VWhereJoin.explain(p);
-      body = `<p class="lead">${cols.length} column${cols.length === 1 ? '' : 's'} from ${views} view${views === 1 ? '' : 's'}. Rename a column to set its report header.</p>
-        <table class="bcols"><thead><tr><th data-tip="The column name the report will show. Leave blank to use the suggested name.">Header</th><th data-tip="The column and the view it comes from. Click the view to open it.">From</th><th></th></tr></thead><tbody>
+      const by = p.anchor === VWhereJoin.HUB ? 'device' : 'user';
+      // A view in the red "devices will repeat" note isn't warned about again below it; its fix is in the note
+      const m = p.warnings.find(w => w.multiply);
+      const notes = p.warnings.filter(w => !w.multiply && (w.kept || !(m && m.views.includes(w.view))));
+      const isBridge = (w) => p.joins.some(j => j.view === w.view && j.role === 'bridge');
+      const oneRow = !p.warnings.some(w => !w.kept);    // nothing left that repeats a device
+      const on = [report.collection && 'Collection picker', report.readable && 'Readable values', report.skipUnknown && 'Skip stale records', report.rbac && 'SSRS version'].filter(Boolean);
+      const open = foldState();
+      body = `<p class="lead">${cols.length} column${cols.length === 1 ? '' : 's'} from ${views} view${views === 1 ? '' : 's'}.</p>
+        <table class="bcols"><thead><tr><th data-tip="The column name the report will show. Type to rename it, or leave it blank to use the suggested name.">Header</th><th data-tip="The column and the view it comes from. Click the view to open it.">From</th><th></th></tr></thead><tbody>
         ${cols.map((c, i) => `<tr>
           <td><input type="text" data-label="${i}" value="${esc(c.as || '')}" placeholder="${esc(defaultHeader(c))}" aria-label="Header for ${esc(c.column)}"></td>
           <td class="src"><div class="col">${esc(c.column)}${report.readable && VWhereJoin.formatOf(c.view, c.column) ? `<span class="tag fmt" data-tip="Readable values: shown as ${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}">${esc(VWhereJoin.describe(VWhereJoin.formatOf(c.view, c.column)))}</span>` : ''}</div><a class="link" data-go="${esc(c.view)}" data-tip="Open ${esc(c.view)}">${esc(c.view)}</a></td>
           <td class="mv"><button type="button" data-up="${i}" data-tip="Move up: columns appear in this order in the report" aria-label="Move up" ${i ? '' : 'disabled'}>↑</button> <button type="button" data-down="${i}" data-tip="Move down" aria-label="Move down" ${i < cols.length - 1 ? '' : 'disabled'}>↓</button> <button type="button" data-rm="${i}" data-tip="Remove from the report" aria-label="Remove">✕</button></td>
         </tr>`).join('')}
         </tbody></table>
+        ${views > 1 || p.joins.length ? `<p class="joined"><span class="ok" aria-hidden="true">✓</span><span>v_Where lines these up by ${by} for you${oneRow ? `, one row per ${by}` : ''}. No joins to write.
+          <a class="link" data-showconn href="#" role="button">See how</a></span></p>` : ''}
         ${multNote(p)}
-        ${filtersSection(p)}
-        <section class="conn"><h3>How the tables are connected</h3>
-          <p class="lead">To show these columns side by side, one row per ${p.anchor === VWhereJoin.HUB ? 'device' : 'user'}, v_Where lines the tables up by ID.
-            In SQL that's called a join; it's written for you in the query below. ${p.anchor === VWhereJoin.HUB ? 'Devices' : 'Users'} with no data in a table still show, with blanks.
-            <a class="link" data-help href="#" role="button">More in How it works</a></p>
-          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : s.role === 'multiply' ? 'stopline' : s.role === 'filter-where' ? 'filterline' : ''}">${esc(s.text)}</li>`).join('')}</ol>
-        </section>
-        <div class="opts">
-          <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
-            <span>Only devices in one collection <span class="hint">(adds <code>@CollectionID</code>, like built-in reports)</span></span></label>
-          <label><input type="checkbox" data-opt="readable" ${report.readable ? 'checked' : ''}>
-            <span>Readable values <span class="hint">(memory in GB, status codes as words, 1/0 as Yes/No; disk sizes stay raw because ConfigMgr versions store them in different units)</span></span></label>
-          <label><input type="checkbox" data-opt="skipUnknown" ${report.skipUnknown ? 'checked' : ''}>
-            <span>Skip stale records <span class="hint">(obsolete and decommissioned records that would show a device twice, and the two Unknown Computer placeholders)</span></span></label>
-          <label><input type="checkbox" data-opt="rbac" ${report.rbac ? 'checked' : ''}>
-            <span>SSRS version <span class="hint">(<code>fn_rbac_</code> functions with <code>@UserSIDs</code>, so people only see what their console role allows)</span></span></label>
-        </div>
-        ${p.warnings.filter(w => !w.multiply && !p.joins.some(j => j.view === w.view && j.role === 'bridge')).map(w => w.kept
+        ${notes.map(w => w.kept
           ? `<div class="note">${esc(w.text)}<button type="button" data-unkeep="${esc(w.view)}">Undo</button></div>`
+          : isBridge(w) ? `<div class="note">${esc(w.text)}</div>`
           : `<div class="note warn">${esc(w.text)}${w.fix ? `<button type="button" data-keep="${esc(w.view)}">Keep one row: ${esc(w.fix.replace(/^AND /, ''))}</button>` : ''}</div>`).join('')}
         ${p.unplaced.map(u => `<div class="note warn"><b>Left out ${esc(u.view)}.</b> ${esc(u.why)}</div>`).join('')}
+        ${filtersSection(p)}
         <section><h3>Download as a ConfigMgr report</h3>
           <div class="rdlrow">
             <label class="title">Report name<input type="text" data-meta="title" value="${esc(report.title)}" placeholder="Report draft"></label>
             <label class="site">Site code<input type="text" data-meta="site" value="${esc(report.site)}" maxlength="3" placeholder="PS1" spellcheck="false"></label>
             <button type="button" class="primary" data-rdl data-tip="Download a report file. Upload it to the ConfigMgr reports folder in SSRS, or open it in Report Builder.">Download .rdl</button>
           </div>
-          <p class="hint">Upload it to your <code>ConfigMgr_&lt;site&gt;</code> folder in the SSRS web portal, or open it in Report Builder. It uses the
-            site's shared data source, a collection picker, and the <code>fn_rbac_</code> functions, so it respects console permissions like built-in reports.</p>
+          <p class="hint">Upload it to your <code>ConfigMgr_&lt;site&gt;</code> folder in the SSRS web portal, or open it in Report Builder.
+            Like built-in reports, it ${report.collection ? 'asks for a collection and ' : ''}only shows what each person's console role allows.</p>
         </section>
-        <section><h3>Query</h3><pre class="sql">${esc(sql)}</pre></section>
+        <div class="more">
+        <details class="fold conn" data-fold="conn" ${open.conn ? 'open' : ''}><summary>How it's connected<span class="sum">${p.joins.length + 1} table${p.joins.length ? 's' : ''}, lined up by ${by} ID</span></summary>
+          <div class="fbody"><p class="lead">To show these columns side by side, v_Where matches each table to the ${by} list by ID.
+            In SQL that's called a join; it's written for you in the query. ${by === 'device' ? 'Devices' : 'Users'} with no data in a table still show, with blanks.
+            <a class="link" data-help href="#" role="button">More in How it works</a></p>
+          <ol>${steps.map(s => `<li class="${s.role === 'where' ? 'where' : s.role === 'multiply' ? 'stopline' : s.role === 'filter-where' ? 'filterline' : ''}">${esc(s.text)}</li>`).join('')}</ol></div>
+        </details>
+        <details class="fold" data-fold="opts" ${open.opts ? 'open' : ''}><summary>Options<span class="sum">${on.length ? esc(on.join(' · ')) : 'none on'}</span></summary>
+          <div class="fbody opts">
+          <label><input type="checkbox" data-opt="collection" ${report.collection ? 'checked' : ''}>
+            <span>Collection picker <span class="hint">(only devices in the collection picked when the report runs; adds <code>@CollectionID</code>, like built-in reports)</span></span></label>
+          <label><input type="checkbox" data-opt="readable" ${report.readable ? 'checked' : ''}>
+            <span>Readable values <span class="hint">(memory in GB, status codes as words, 1/0 as Yes/No; disk sizes stay raw because ConfigMgr versions store them in different units)</span></span></label>
+          <label><input type="checkbox" data-opt="skipUnknown" ${report.skipUnknown ? 'checked' : ''}>
+            <span>Skip stale records <span class="hint">(obsolete and decommissioned records that would show a device twice, and the two Unknown Computer placeholders)</span></span></label>
+          <label><input type="checkbox" data-opt="rbac" ${report.rbac ? 'checked' : ''}>
+            <span>SSRS version <span class="hint">(<code>fn_rbac_</code> functions with <code>@UserSIDs</code>, so people only see what their console role allows. The .rdl download always uses it.)</span></span></label>
+          </div>
+        </details>
+        <details class="fold" data-fold="query" ${open.query ? 'open' : ''}><summary>Query<span class="sum">the SQL, for SSMS or Report Builder</span></summary>
+          <div class="fbody"><pre class="sql">${esc(sql)}</pre></div>
+        </details>
+        </div>
         <div class="actions"><button type="button" data-copysql data-tip="Copy the SQL to run in SQL Server Management Studio or paste into Report Builder.">Copy query</button><button type="button" data-clear data-tip="Remove every column from the report (asks twice).">Clear report</button></div>`;
     }
+    // Re-rendering replaces the panel body; keep the reader where they were
+    const prev = els.basket.querySelector('.bbody');
+    const top = prev ? prev.scrollTop : 0;
     els.basket.innerHTML = `<div class="bhead"><h2>Report draft</h2><button type="button" class="close" aria-label="Close report draft">✕</button></div>
       <div class="bbody">${body}</div>`;
+    els.basket.querySelector('.bbody').scrollTop = top;
+  }
+
+  // Which folded sections of the Report draft are open. Remembered in this browser; all closed by default.
+  const FOLDS = 'vwhere.folds.v1';
+  let folds = null;
+  function foldState() {
+    if (!folds) { try { folds = JSON.parse(localStorage.getItem(FOLDS)) || {}; } catch (e) { folds = {}; } }
+    return folds;
+  }
+  function saveFold(name, isOpen) {
+    foldState()[name] = isOpen;
+    try { localStorage.setItem(FOLDS, JSON.stringify(folds)); } catch (e) { /* remembered until the page reloads */ }
   }
 
   // ---------- How it works: first-visit strip and help panel ----------
@@ -935,6 +1014,7 @@
   els.showFn.addEventListener('change', () => { state.fn = els.showFn.checked; writeHash(); search(); });
   els.chips.addEventListener('click', e => {
     const b = e.target.closest('.chip'); if (!b) return;
+    if (b.hasAttribute('data-more')) { chipsOpen = !chipsOpen; renderChipCounts(chipMatches); return; }
     state.cat = b.dataset.cat; writeHash(); search();
   });
   els.results.addEventListener('click', e => {
@@ -963,6 +1043,8 @@
       return;
     }
     if (e.target.closest('[data-back]')) { els.results.scrollIntoView({ block: 'start' }); return; }
+    const tr = e.target.closest('[data-try]');
+    if (tr) { e.preventDefault(); els.q.value = state.q = tr.dataset.try; writeHash(); search(); els.q.focus(); return; }
     const a = e.target.closest('[data-go]'); if (a) goTo(a.dataset.go);
   });
 
@@ -988,8 +1070,16 @@
 
   // Report draft panel
   els.basketBtn.addEventListener('click', () => openBasket(els.basket.hidden));
+  // 'toggle' doesn't bubble, so listen while it travels down
+  els.basket.addEventListener('toggle', e => { const f = e.target.dataset && e.target.dataset.fold; if (f) saveFold(f, e.target.open); }, true);
   els.basket.addEventListener('click', e => {
     if (e.target.closest('[data-help]')) { e.preventDefault(); openHelp(true); return; }
+    if (e.target.closest('[data-showconn]')) {
+      e.preventDefault();
+      const d = els.basket.querySelector('details[data-fold="conn"]');
+      if (d) { d.open = true; saveFold('conn', true); d.scrollIntoView({ block: 'start', behavior: 'smooth' }); d.querySelector('summary').focus({ preventScroll: true }); }
+      return;
+    }
     const t = e.target.closest('button, a[data-go]');
     if (!t) return;
     const d = t.dataset, cols = report.cols;
